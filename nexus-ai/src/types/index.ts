@@ -388,6 +388,12 @@ export type Database = {
         };
         Returns: string;
       };
+      generate_project_recommendations: {
+        Args: {
+          target_project_id: string;
+        };
+        Returns: AiRecommendation[];
+      };
       match_documents: {
         Args: {
           query_embedding: number[];

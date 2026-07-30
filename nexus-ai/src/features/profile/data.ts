@@ -5,10 +5,31 @@ export type ProfileProject = { id: string; name: string; role: "pm" | "member" }
 
 export async function getProfilePageData(): Promise<{ profile: User; projects: ProfileProject[] }> {
   const supabase = await createClient();
-  const { data: ensured, error: ensureError } = await supabase.rpc("ensure_user_profile");
-  if (ensureError || !ensured) throw new Error(ensureError?.message || "Không thể tải profile.");
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-  const profile = ensured as User;
+  if (userError || !user) throw new Error("Bạn cần đăng nhập để xem profile.");
+
+  const { data: ensured, error: ensureError } = await supabase.rpc("ensure_user_profile");
+  let profile = ensured as User | null;
+
+  if (ensureError || !profile) {
+    const { data: fallbackProfile, error: fallbackError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (fallbackError || !fallbackProfile) {
+      throw new Error(
+        `${ensureError?.message || fallbackError?.message || "Không thể tải profile."} Hãy chạy migration 006_invites_profile_user_code.sql nếu chưa chạy.`,
+      );
+    }
+
+    profile = fallbackProfile as User;
+  }
   const { data: memberships, error: memberError } = await supabase
     .from("project_members")
     .select("project_id,role")

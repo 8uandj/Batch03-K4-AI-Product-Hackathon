@@ -117,3 +117,26 @@ export async function acceptInvite(
     return { error: error instanceof Error ? error.message : "Không thể join project." };
   }
 }
+
+export async function generateProjectRecommendations(
+  _previousState: WorkspaceActionState & { message?: string },
+  formData: FormData,
+): Promise<WorkspaceActionState & { message?: string }> {
+  try {
+    const projectId = getString(formData, "projectId");
+    if (!projectId) return { error: "Thiếu project id." };
+
+    const { supabase } = await requireUser();
+    const { data, error } = await supabase.rpc("generate_project_recommendations", {
+      target_project_id: projectId,
+    });
+
+    if (error) return { error: error.message };
+    const count = Array.isArray(data) ? data.length : 0;
+    return { message: `Đã tạo ${count} đề xuất chia việc từ tài liệu và hồ sơ thành viên.` };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Không thể chạy AI analysis.",
+    };
+  }
+}
