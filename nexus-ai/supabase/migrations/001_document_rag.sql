@@ -2,7 +2,7 @@ create extension if not exists vector;
 create extension if not exists pgcrypto;
 
 alter table public.documents
-  add column if not exists project_id text not null default 'global',
+  add column if not exists project_id uuid,
   add column if not exists source_id uuid not null default gen_random_uuid(),
   add column if not exists filename text not null default 'untitled',
   add column if not exists chunk_index integer not null default 0,
@@ -41,7 +41,7 @@ drop function if exists public.match_documents(vector(1536), float, integer);
 
 create or replace function public.match_documents(
   query_embedding vector(1536),
-  filter_project_id text,
+  filter_project_id uuid,
   match_threshold float default 0.35,
   match_count integer default 5
 )
@@ -70,7 +70,7 @@ $$;
 
 grant execute on function public.match_documents(
   vector(1536),
-  text,
+  uuid,
   float,
   integer
 ) to service_role;
