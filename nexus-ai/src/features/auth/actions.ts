@@ -32,22 +32,12 @@ function getSiteUrl() {
 
 async function ensureProfile(name?: string) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.rpc("ensure_user_profile");
 
-  if (!user) return null;
-
-  const { data } = await supabase
-    .from("users")
-    .upsert({
-      id: user.id,
-      email: user.email ?? null,
-      name: name || user.user_metadata?.name || user.email || null,
-      updated_at: new Date().toISOString(),
-    })
-    .select("onboarding_completed")
-    .single();
+  if (name && data?.id) {
+    await supabase.from("users").update({ name }).eq("id", data.id);
+    return { ...data, name };
+  }
 
   return data;
 }

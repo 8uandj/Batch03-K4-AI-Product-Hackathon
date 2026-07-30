@@ -9,6 +9,8 @@ import {
   UsersRound,
 } from "lucide-react";
 
+import { InviteMemberForm } from "./InviteMemberForm";
+
 import type {
   WorkspaceInvite,
   WorkspaceProject,
@@ -21,6 +23,7 @@ type ProjectOverviewProps = {
   invites: WorkspaceInvite[];
   recommendations: WorkspaceRecommendation[];
   risks: WorkspaceRiskEvent[];
+  currentRole: "pm" | "member";
   dataSource: "supabase" | "mock";
 };
 
@@ -29,6 +32,7 @@ export function ProjectOverview({
   invites,
   recommendations,
   risks,
+  currentRole,
   dataSource,
 }: ProjectOverviewProps) {
   return (
@@ -131,8 +135,10 @@ export function ProjectOverview({
             <MailPlus aria-hidden="true" className="text-slate-500" size={18} />
             <h2 className="font-semibold text-slate-950">Invite queue</h2>
           </div>
+          {currentRole === "pm" ? <InviteMemberForm projectId={project.id} /> : null}
+
           {invites.length ? (
-            <div className="space-y-3">
+            <div className="mt-4 space-y-3">
               {invites.map((invite) => (
                 <div
                   className="rounded-lg border border-slate-200 p-3 text-sm"

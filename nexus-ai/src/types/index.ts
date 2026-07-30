@@ -24,9 +24,13 @@ export type Json =
 
 export interface User {
   id: string;
+  user_code: string | null;
   email: string | null;
+  avatar_url: string | null;
   name: string | null;
+  bio: string | null;
   skills: string[];
+  cv_url: string | null;
   cv_text: string | null;
   eq_answers: Json;
   eq_summary: Json;
@@ -358,6 +362,29 @@ export type Database = {
         Args: {
           project_name: string;
           project_description?: string | null;
+        };
+        Returns: string;
+      };
+      generate_user_code: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
+      ensure_user_profile: {
+        Args: Record<string, never>;
+        Returns: User;
+      };
+      create_project_invite: {
+        Args: {
+          target_project_id: string;
+          invitee_email?: string | null;
+          invitee_user_code?: string | null;
+          invite_role?: ProjectRole;
+        };
+        Returns: ProjectInvite;
+      };
+      accept_project_invite: {
+        Args: {
+          invite_token: string;
         };
         Returns: string;
       };

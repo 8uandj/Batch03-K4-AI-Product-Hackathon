@@ -56,6 +56,8 @@ export async function completeOnboarding(
 
     if (userError || !user) return { error: "Bạn cần đăng nhập để hoàn tất onboarding." };
 
+    await supabase.rpc("ensure_user_profile");
+
     const eqSummary = buildEqSummary(eqAnswers);
     const { error } = await supabase.from("users").upsert({
       id: user.id,

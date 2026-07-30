@@ -24,10 +24,7 @@ async function requireUser() {
     throw new Error("Bạn cần đăng nhập để thực hiện thao tác này.");
   }
 
-  await supabase.from("users").upsert({
-    id: user.id,
-    name: user.user_metadata?.name || user.email || null,
-  });
+  await supabase.rpc("ensure_user_profile");
 
   return { supabase, user };
 }
@@ -69,42 +66,54 @@ export async function createProject(
   }
 }
 
-export async function inviteMember(
+export async function createInvite(
+  _previousState: WorkspaceActionState & { inviteLink?: string },
+  formData: FormData,
+): Promise<WorkspaceActionState & { inviteLink?: string }> {
+  try {
+    const projectId = getString(formData, "projectId");
+    const email = getString(formData, "email");
+    const userCode = getString(formData, "userCode");
+    const role = getString(formData, "role") === "pm" ? "pm" : "member";
+
+    if (!projectId) return { error: "Thiếu project id." };
+    if (!email && !userCode) return { error: "Nhập email hoặc user code để mời." };
+
+    const { supabase } = await requireUser();
+    const { data: invite, error } = await supabase.rpc("create_project_invite", {
+      target_project_id: projectId,
+      invitee_email: email || null,
+      invitee_user_code: userCode || null,
+      invite_role: role,
+    });
+
+    if (error || !invite) return { error: error?.message || "Không thể tạo invite." };
+    return { inviteLink: `/join/${invite.token}` };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Không thể tạo invite." };
+  }
+}
+
+export async function acceptInvite(
   _previousState: WorkspaceActionState,
   formData: FormData,
 ): Promise<WorkspaceActionState> {
   try {
-    const projectId = getString(formData, "projectId");
-    const email = getString(formData, "email");
-    const role = getString(formData, "role") === "pm" ? "pm" : "member";
-
-    if (!projectId || !email) {
-      return { error: "Thiếu project hoặc email invite." };
-    }
-
-    const { supabase, user } = await requireUser();
-    const { data: membership } = await supabase
-      .from("project_members")
-      .select("role")
-      .eq("project_id", projectId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (membership?.role !== "pm") {
-      return { error: "Chỉ PM của project mới được mời thành viên." };
-    }
-
-    const { error } = await supabase.from("project_invites").insert({
-      project_id: projectId,
-      email,
-      role,
+    const token = getString(formData, "token");
+    const { supabase } = await requireUser();
+    const { data: projectId, error } = await supabase.rpc("accept_project_invite", {
+      invite_token: token,
     });
 
-    if (error) return { error: error.message };
-    return {};
+    if (error || !projectId) return { error: error?.message || "Không thể join project." };
+    redirect(`/project/${projectId}`);
   } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Không thể tạo invite.",
-    };
+    const digest =
+      typeof error === "object" && error && "digest" in error
+        ? String(error.digest)
+        : "";
+    if (digest.startsWith("NEXT_REDIRECT")) throw error;
+
+    return { error: error instanceof Error ? error.message : "Không thể join project." };
   }
 }

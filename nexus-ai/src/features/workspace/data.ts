@@ -146,6 +146,7 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
   invites: WorkspaceInvite[];
   recommendations: WorkspaceRecommendation[];
   risks: WorkspaceRiskEvent[];
+  currentRole: "pm" | "member";
   dataSource: "supabase" | "mock";
 } | null> {
   if (projectId === "demo") {
@@ -154,6 +155,7 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
       invites: mockInvites,
       recommendations: mockRecommendations,
       risks: mockRiskEvents,
+      currentRole: "pm",
       dataSource: "mock",
     };
   }
@@ -272,6 +274,7 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
       summary: risk.summary,
       owner: memberName(risk.user_id),
     })),
+    currentRole: currentMembership.role,
     dataSource: "supabase",
   };
 }
