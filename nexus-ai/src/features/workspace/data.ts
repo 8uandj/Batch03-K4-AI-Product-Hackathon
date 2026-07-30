@@ -59,7 +59,7 @@ type RecommendationRow = {
   id: string;
   type: WorkspaceRecommendation["type"];
   title: string;
-  recommended_user_id: string | null;
+  target_user_id: string | null;
   rationale: string | null;
   confidence: number | null;
 };
@@ -68,9 +68,8 @@ type RiskRow = {
   id: string;
   type: WorkspaceRiskEvent["type"];
   severity: WorkspaceRiskEvent["severity"];
-  title: string;
-  description: string | null;
-  owner_id: string | null;
+  summary: string;
+  user_id: string | null;
 };
 
 const TASK_STATUSES: TaskStatus[] = ["todo", "doing", "done"];
@@ -198,13 +197,13 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
         .order("created_at", { ascending: false }),
       supabase
         .from("ai_recommendations")
-        .select("id,type,title,recommended_user_id,rationale,confidence")
+        .select("id,type,title,target_user_id,rationale,confidence")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
         .limit(5),
       supabase
         .from("risk_events")
-        .select("id,type,severity,title,description,owner_id")
+        .select("id,type,severity,summary,user_id")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
         .limit(5),
@@ -262,7 +261,7 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
       id: item.id,
       type: item.type,
       title: item.title,
-      member: memberName(item.recommended_user_id),
+      member: memberName(item.target_user_id),
       rationale: item.rationale || "AI chưa ghi lý do chi tiết.",
       confidence: item.confidence ?? 0,
     })),
@@ -270,8 +269,8 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
       id: risk.id,
       type: risk.type,
       severity: risk.severity,
-      summary: risk.description || risk.title,
-      owner: memberName(risk.owner_id),
+      summary: risk.summary,
+      owner: memberName(risk.user_id),
     })),
     dataSource: "supabase",
   };

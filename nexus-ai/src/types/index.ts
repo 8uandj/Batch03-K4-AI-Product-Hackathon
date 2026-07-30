@@ -348,6 +348,13 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      create_project_with_pm: {
+        Args: {
+          project_name: string;
+          project_description?: string | null;
+        };
+        Returns: string;
+      };
       match_documents: {
         Args: {
           query_embedding: number[];

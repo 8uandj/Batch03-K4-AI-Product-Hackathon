@@ -41,9 +41,9 @@ export function Sidebar() {
     },
     {
       label: "Dashboard",
-      href: "/pm-dashboard",
+      href: "/dashboard",
       icon: LayoutDashboard,
-      isActive: pathname.startsWith("/pm-dashboard"),
+      isActive: pathname.startsWith("/dashboard") || pathname.startsWith("/pm-dashboard"),
     },
   ];
 

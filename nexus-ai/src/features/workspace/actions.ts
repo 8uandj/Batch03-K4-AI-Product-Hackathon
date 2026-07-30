@@ -42,30 +42,20 @@ export async function createProject(
 
     if (!name) return { error: "Tên project không được để trống." };
 
-    const { supabase, user } = await requireUser();
-    const { data: project, error: projectError } = await supabase
-      .from("projects")
-      .insert({
-        name,
-        description: description || null,
-        owner_id: user.id,
-      })
-      .select("id")
-      .single();
+    const { supabase } = await requireUser();
+    const { data: projectId, error: projectError } = await supabase.rpc(
+      "create_project_with_pm",
+      {
+        project_name: name,
+        project_description: description || null,
+      },
+    );
 
-    if (projectError || !project) {
+    if (projectError || !projectId) {
       return { error: projectError?.message || "Không thể tạo project." };
     }
 
-    const { error: memberError } = await supabase.from("project_members").insert({
-      project_id: project.id,
-      user_id: user.id,
-      role: "pm",
-    });
-
-    if (memberError) return { error: memberError.message };
-
-    redirect(`/project/${project.id}`);
+    redirect(`/project/${projectId}`);
   } catch (error) {
     const digest =
       typeof error === "object" && error && "digest" in error
