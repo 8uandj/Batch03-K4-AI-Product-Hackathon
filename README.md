@@ -94,3 +94,5 @@ Dữ liệu trong `data/` là dữ liệu thật của khoá học (đã ẩn da
 6. Sau sự kiện, **xoá các bản sao data pack** khỏi máy cá nhân và các công cụ đã upload nếu ban tổ chức yêu cầu.
 
 Vi phạm được xử lý theo quy định của khoá và có thể ảnh hưởng trực tiếp đến điểm của nhóm.
+
+https://github.com/8uandj/Batch03-K4-AI-Product-Hackathon.git
