@@ -95,4 +95,4 @@ Dữ liệu trong `data/` là dữ liệu thật của khoá học (đã ẩn da
 
 Vi phạm được xử lý theo quy định của khoá và có thể ảnh hưởng trực tiếp đến điểm của nhóm.
 
-https://github.com/8uandj/Batch03-K4-AI-Product-Hackathon.git
+https://docs.google.com/document/d/1FpViaW2A7pspszEqDaWgVWRW_udgXOWYZ8uVEHU5rl0/edit?usp=sharing
