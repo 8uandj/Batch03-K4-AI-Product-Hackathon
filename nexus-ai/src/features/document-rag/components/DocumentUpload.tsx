@@ -29,7 +29,9 @@ export function DocumentUpload({ projectId }: DocumentUploadProps) {
         method: "POST",
         body,
       });
-      const payload = (await response.json()) as UploadResult & { error?: string };
+      const payload = (await response.json()) as UploadResult & {
+        error?: string;
+      };
       if (!response.ok) throw new Error(payload.error || "Upload thất bại.");
       setResult(payload);
     } catch (uploadError) {
@@ -43,16 +45,26 @@ export function DocumentUpload({ projectId }: DocumentUploadProps) {
   }
 
   return (
-    <section>
-      <p className="eyebrow">Knowledge base</p>
-      <h2>Nạp tài liệu</h2>
-      <p className="muted">
-        PDF, TXT, Markdown, CSV hoặc JSON. Tối đa 10 MB mỗi file.
-      </p>
+    <section className="space-y-4">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Knowledge base
+        </p>
+        <h2 className="mt-1 text-xl font-semibold text-slate-950">
+          Nạp tài liệu
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          PDF, TXT, Markdown, CSV hoặc JSON. Tối đa 10 MB mỗi file.
+        </p>
+      </div>
 
-      <div className="upload-card">
+      <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
         <div
-          className={`upload-zone ${dragging ? "is-dragging" : ""}`}
+          className={`flex min-h-56 flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-5 text-center transition-colors ${
+            dragging
+              ? "border-slate-950 bg-white text-slate-950"
+              : "border-slate-300 bg-white text-slate-600"
+          }`}
           onDragEnter={(event) => {
             event.preventDefault();
             setDragging(true);
@@ -65,11 +77,13 @@ export function DocumentUpload({ projectId }: DocumentUploadProps) {
             void upload(event.dataTransfer.files[0]);
           }}
         >
-          <UploadCloud size={28} />
-          <strong>Kéo tài liệu vào đây</strong>
-          <span className="muted">hoặc</span>
+          <span className="flex size-12 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+            <UploadCloud aria-hidden="true" size={28} />
+          </span>
+          <strong className="text-sm text-slate-900">Kéo tài liệu vào đây</strong>
+          <span className="text-xs text-slate-500">hoặc</span>
           <button
-            className="secondary-button"
+            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={uploading}
             onClick={() => inputRef.current?.click()}
             type="button"
@@ -77,6 +91,7 @@ export function DocumentUpload({ projectId }: DocumentUploadProps) {
             {uploading ? "Đang lập chỉ mục…" : "Chọn tài liệu"}
           </button>
           <input
+            className="hidden"
             ref={inputRef}
             accept=".pdf,.txt,.md,.markdown,.csv,.json"
             onChange={(event) => void upload(event.target.files?.[0])}
@@ -85,14 +100,20 @@ export function DocumentUpload({ projectId }: DocumentUploadProps) {
         </div>
 
         {result ? (
-          <div className="upload-result">
-            <FileText size={15} /> <strong>{result.filename}</strong>
-            <div className="muted">
-              Đã tạo {result.chunks} đoạn tìm kiếm · chế độ {result.mode}
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+            <div className="flex items-center gap-2 font-semibold">
+              <FileText aria-hidden="true" size={15} /> {result.filename}
             </div>
+            <p className="mt-1 text-xs text-emerald-700">
+              Đã tạo {result.chunks} đoạn tìm kiếm · chế độ {result.mode}
+            </p>
           </div>
         ) : null}
-        {error ? <div className="upload-result is-error">{error}</div> : null}
+        {error ? (
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
       </div>
     </section>
   );

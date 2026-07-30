@@ -18,8 +18,13 @@ export interface User {
 
 export interface Document {
   id: string;
+  project_id: string;
+  source_id: string;
+  filename: string;
+  chunk_index: number;
   content: string;
   embedding: number[];
+  metadata: Json;
   created_at: string;
 }
 
@@ -46,8 +51,25 @@ export type Database = {
       };
       documents: {
         Row: Document;
-        Insert: Partial<Omit<Document, 'id' | 'created_at'>> & {
+        Insert: Partial<
+          Omit<
+            Document,
+            | 'id'
+            | 'source_id'
+            | 'chunk_index'
+            | 'filename'
+            | 'metadata'
+            | 'created_at'
+          >
+        > & {
           id?: string;
+          project_id: string;
+          source_id?: string;
+          filename?: string;
+          chunk_index?: number;
+          content: string;
+          embedding: number[];
+          metadata?: Json;
           created_at?: string;
         };
         Update: Partial<Omit<Document, 'id'>>;
@@ -55,7 +77,9 @@ export type Database = {
       };
       tasks: {
         Row: Task;
-        Insert: Partial<Omit<Task, 'id' | 'status' | 'updated_at' | 'created_at'>> & {
+        Insert: Partial<
+          Omit<Task, 'id' | 'status' | 'updated_at' | 'created_at'>
+        > & {
           id?: string;
           status?: TaskStatus;
           updated_at?: string;
@@ -78,11 +102,14 @@ export type Database = {
       match_documents: {
         Args: {
           query_embedding: number[];
-          match_threshold: number;
-          match_count: number;
+          filter_project_id: string;
+          match_threshold?: number;
+          match_count?: number;
         };
         Returns: Array<{
           id: string;
+          filename: string;
+          chunk_index: number;
           content: string;
           similarity: number;
         }>;
