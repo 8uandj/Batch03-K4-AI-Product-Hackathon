@@ -1,0 +1,8 @@
+# Python tooling for Nexus AI helper scripts (RAG ingestion, PDF parsing, seeding).
+python-dotenv>=1.0.1
+pypdf>=5.0.0
+openai>=1.59.0
+supabase>=2.10.0
+langchain>=0.3.0
+langchain-openai>=0.2.0
+numpy>=2.0.0
