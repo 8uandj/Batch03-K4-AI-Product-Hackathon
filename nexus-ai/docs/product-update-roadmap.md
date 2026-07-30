@@ -283,15 +283,17 @@ Can bo sung sau:
 - Co Supabase query an toan, khong dung service role o client khong?
 - Co mock data de demo khi API/AI chua san sang khong?
 - Co empty/loading/error state khong?
-- `npm run lint` pass?
-- `npm run build` pass?
+- GitHub Actions `Nexus AI CI` pass?
+- `npm run lint` pass neu test local?
+- `npm run build` pass neu test local?
 - Vercel Preview URL test duoc khong?
 - Neu dat yeu cau, moi merge vao `main` de release Production.
 
 ## 13. Immediate Next Actions
 
 1. Thiet lap Vercel Auto-Deploy voi Root Directory `nexus-ai`.
-2. Tao mot branch test nho, push len GitHub va xac nhan co Preview Deployment.
-3. Merge/push `main` va xac nhan Production Deployment.
-4. Sau khi deploy on dinh, moi chot schema proposal cho `projects`, `project_members`, `chat_rooms`, `chat_messages`, `risk_events`.
-5. Giao tung dev tiep tuc feature theo acceptance criteria o tren.
+2. Cau hinh GitHub repository secrets cho `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `OPENAI_API_KEY`.
+3. Tao mot branch test nho, push len GitHub va xac nhan GitHub Actions CI + Preview Deployment.
+4. Merge/push `main` va xac nhan Production Deployment.
+5. Sau khi deploy on dinh, moi chot schema proposal cho `projects`, `project_members`, `chat_rooms`, `chat_messages`, `risk_events`.
+6. Giao tung dev tiep tuc feature theo acceptance criteria o tren.

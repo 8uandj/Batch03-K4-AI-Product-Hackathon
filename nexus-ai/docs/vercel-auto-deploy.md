@@ -52,7 +52,25 @@ Quy tac bao mat:
 - Khong bao gio dua Supabase `service_role` key vao client component.
 - Neu sau nay can service role cho server job, dat ten rieng nhu `SUPABASE_SERVICE_ROLE_KEY` va chi doc trong Route Handler/Server Action.
 
-## 5. Kiem tra Preview Deployment
+## 5. GitHub Actions CI Gate
+
+Repo co workflow `.github/workflows/nexus-ai-ci.yml` de chay `npm ci`, `npm run lint` va `npm run build` khi co PR/push anh huong `nexus-ai/**`.
+
+Truoc khi merge feature vao `main`, PM nen kiem tra:
+
+- GitHub Actions `Nexus AI CI` pass.
+- Vercel Preview Deployment build pass.
+- Preview URL render duoc route can demo.
+
+CI co placeholder an toan de lint/build chay duoc khi chua co secrets. Neu muon CI build voi env that, them GitHub repository secrets trung ten voi Vercel env:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+OPENAI_API_KEY=
+```
+
+## 6. Kiem tra Preview Deployment
 
 Sau khi project da link voi GitHub:
 
@@ -80,7 +98,7 @@ git push -u origin chore/test-vercel-preview
 
 7. Neu Preview build fail, doc log Vercel truoc khi merge.
 
-## 6. Kiem tra Production Deployment
+## 7. Kiem tra Production Deployment
 
 Khi Preview da pass:
 
@@ -102,7 +120,7 @@ npm run build
 
 5. Ghi Production URL vao README hoac team note neu can.
 
-## 7. Release workflow de team lam feature
+## 8. Release workflow de team lam feature
 
 - Moi dev lam tren branch rieng, vi du:
   - `feature/onboarding`
@@ -112,13 +130,14 @@ npm run build
 - Push branch se co Preview Deployment.
 - PM review UI/flow tren Preview URL.
 - Chi merge vao `main` khi:
-  - `npm run lint` pass.
-  - `npm run build` pass.
+  - GitHub Actions `Nexus AI CI` pass.
+  - `npm run lint` pass neu test local.
+  - `npm run build` pass neu test local.
   - Preview URL test duoc.
   - Feature khong sua nham folder owner cua team khac.
   - Env vars can thiet da co tren Vercel.
 
-## 8. Troubleshooting nhanh
+## 9. Troubleshooting nhanh
 
 ### Build fail vi thieu env
 
@@ -153,12 +172,13 @@ nvm use 24
 npm --version
 ```
 
-## 9. Definition of Done
+## 10. Definition of Done
 
 Auto-deploy duoc xem la xong khi co bang chung:
 
 - Vercel project da link GitHub repo.
 - Root Directory la `nexus-ai`.
+- GitHub Actions `Nexus AI CI` pass tren PR/push.
 - Preview Deployment duoc tao khi push branch/PR.
 - Production Deployment duoc tao khi merge vao `main`.
 - Env vars da set cho Preview va Production.
