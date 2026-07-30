@@ -1,4 +1,4 @@
-import { RagWorkspace } from "@/features/document-rag/components/RagWorkspace";
+import { ChatHub } from "@/features/workspace/components/ChatHub";
 
 type ChatPageProps = {
   params: Promise<{ id: string }>;
@@ -6,5 +6,6 @@ type ChatPageProps = {
 
 export default async function ChatPage({ params }: ChatPageProps) {
   const { id } = await params;
-  return <RagWorkspace projectId={id} />;
+
+  return <ChatHub projectId={id} />;
 }

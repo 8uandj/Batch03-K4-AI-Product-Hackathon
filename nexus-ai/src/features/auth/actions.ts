@@ -1,0 +1,96 @@
+"use server";
+
+import { redirect } from "next/navigation";
+
+import { createClient } from "@/lib/supabase/server";
+
+type AuthActionState = {
+  error?: string;
+  message?: string;
+};
+
+function getString(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function safeNextPath(value: string) {
+  if (!value.startsWith("/")) return "/";
+  if (value.startsWith("//")) return "/";
+  return value;
+}
+
+async function ensureProfile(name?: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return;
+
+  await supabase.from("users").upsert({
+    id: user.id,
+    name: name || user.user_metadata?.name || user.email || null,
+  });
+}
+
+export async function signIn(
+  _previousState: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const email = getString(formData, "email");
+  const password = getString(formData, "password");
+  const next = safeNextPath(getString(formData, "next") || "/");
+
+  if (!email || !password) {
+    return { error: "Vui lòng nhập email và mật khẩu." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) return { error: error.message };
+
+  await ensureProfile();
+  redirect(next);
+}
+
+export async function signUp(
+  _previousState: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const name = getString(formData, "name");
+  const email = getString(formData, "email");
+  const password = getString(formData, "password");
+
+  if (!email || !password) {
+    return { error: "Vui lòng nhập email và mật khẩu." };
+  }
+  if (password.length < 6) {
+    return { error: "Mật khẩu cần tối thiểu 6 ký tự." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { name },
+    },
+  });
+
+  if (error) return { error: error.message };
+
+  await ensureProfile(name);
+
+  return {
+    message:
+      "Đăng ký thành công. Nếu Supabase bật email confirmation, hãy kiểm tra email trước khi đăng nhập.",
+  };
+}
+
+export async function signOut() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/login");
+}

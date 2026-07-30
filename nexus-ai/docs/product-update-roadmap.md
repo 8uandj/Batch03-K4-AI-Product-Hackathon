@@ -96,7 +96,7 @@ De xuat bo sung sau khi team thong nhat contract:
 
 - Viet SQL proposal trong file migration rieng, chua apply neu team chua confirm.
 - Cap nhat `src/types/index.ts` sau khi schema duoc duyet.
-- Viet docs API contract cho tung bang.
+- Viet docs API contract cho tung bang trong `docs/api-contracts.md`.
 - Tao seed/mock data chung cho demo neu khong conflict voi feature owner.
 
 ## 5. Phase 2: Auth, roles va onboarding flow

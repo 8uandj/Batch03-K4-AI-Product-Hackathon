@@ -4,6 +4,7 @@ import { ragConfig } from "@/features/document-rag/config";
 import { chunkDocument } from "@/features/document-rag/chunking";
 import { extractTextFromFile } from "@/features/document-rag/extract-text";
 import { indexChunks } from "@/features/document-rag/repository";
+import { ProjectAccessError, requireProjectAccess } from "@/features/workspace/access";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,8 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   try {
     ({ id: projectId } = await params);
+    await requireProjectAccess(projectId);
+
     const data = await request.formData();
     const file = data.get("file");
 
@@ -58,6 +61,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       errorName: error instanceof Error ? error.name : "UnknownError",
       message,
     });
-    return Response.json({ error: message }, { status: 500 });
+    const status = error instanceof ProjectAccessError ? error.status : 500;
+    return Response.json({ error: message }, { status });
   }
 }

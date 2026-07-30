@@ -1,12 +1,13 @@
 import { Dashboard } from "@/features/dashboard/dashboard";
 import { fetchDashboardAnalytics } from "@/features/dashboard/dashboard-analytics";
 import { createMockDashboardAnalytics } from "@/features/dashboard/mock-data";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 async function getDashboardData() {
   try {
+    const supabase = await createClient();
     const analytics = await fetchDashboardAnalytics(supabase);
 
     return {

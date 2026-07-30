@@ -4,6 +4,7 @@ import { streamText } from "ai";
 import { ragConfig } from "@/features/document-rag/config";
 import { buildMockAnswer, buildRagSystemPrompt } from "@/features/document-rag/prompt";
 import { retrieveContext } from "@/features/document-rag/repository";
+import { ProjectAccessError, requireProjectAccess } from "@/features/workspace/access";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,8 @@ type IncomingMessage = { role: "user" | "assistant"; content: string };
 export async function POST(request: Request, { params }: RouteContext) {
   try {
     const { id: projectId } = await params;
+    await requireProjectAccess(projectId);
+
     const body = (await request.json()) as {
       message?: string;
       history?: IncomingMessage[];
@@ -62,6 +65,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Không thể trả lời câu hỏi.";
-    return Response.json({ error: message }, { status: 500 });
+    const status = error instanceof ProjectAccessError ? error.status : 500;
+    return Response.json({ error: message }, { status });
   }
 }
