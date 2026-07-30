@@ -7,10 +7,25 @@ import { House, KanbanSquare, LayoutDashboard, MessageSquare } from 'lucide-reac
 import { cn } from '@/lib/utils';
 
 const navigation = [
-  { label: 'Home', href: '/', icon: House },
-  { label: 'Board', href: '/project/demo/board', icon: KanbanSquare },
-  { label: 'Chat', href: '/project/demo/chat', icon: MessageSquare },
-  { label: 'Dashboard', href: '/pm-dashboard', icon: LayoutDashboard },
+  { label: 'Home', href: '/', icon: House, isActive: (path: string) => path === '/' },
+  {
+    label: 'Board',
+    href: '/project/demo/board',
+    icon: KanbanSquare,
+    isActive: (path: string) => path.startsWith('/project/') && path.endsWith('/board'),
+  },
+  {
+    label: 'Chat',
+    href: '/project/demo/chat',
+    icon: MessageSquare,
+    isActive: (path: string) => path.startsWith('/project/') && path.endsWith('/chat'),
+  },
+  {
+    label: 'Dashboard',
+    href: '/pm-dashboard',
+    icon: LayoutDashboard,
+    isActive: (path: string) => path.startsWith('/pm-dashboard'),
+  },
 ];
 
 export function Sidebar() {
@@ -29,10 +44,7 @@ export function Sidebar() {
       <nav className="flex flex-1 flex-col items-center gap-2 py-4">
         {navigation.map((item) => {
           const Icon = item.icon;
-          const active =
-            item.href === '/'
-              ? pathname === item.href
-              : pathname.startsWith(item.href.replace('/demo', ''));
+          const active = item.isActive(pathname);
 
           return (
             <Link
