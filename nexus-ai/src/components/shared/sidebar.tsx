@@ -33,13 +33,13 @@ export function Sidebar() {
     },
     {
       label: "Projects",
-      href: projectId ? `/project/${projectId}` : "/project/new",
+      href: "/project",
       icon: FolderKanban,
-      isActive:
-        pathname.startsWith("/project/") &&
-        !pathname.includes("/board") &&
-        !pathname.includes("/chat") &&
-        !pathname.includes("/documents"),
+      isActive: pathname === "/project" ||
+        (pathname.startsWith("/project/") &&
+          !pathname.includes("/board") &&
+          !pathname.includes("/chat") &&
+          !pathname.includes("/documents")),
     },
     {
       label: projectId ? "Board" : "Board · demo",

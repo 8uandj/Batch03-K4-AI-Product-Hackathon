@@ -230,12 +230,20 @@ export default async function HomePage() {
               </p>
             </div>
             {user ? (
-              <Link
-                className="inline-flex w-fit items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
-                href="/project/new"
-              >
-                <Plus size={16} /> New project
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-50"
+                  href="/project"
+                >
+                  Quản trị project
+                </Link>
+                <Link
+                  className="inline-flex w-fit items-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
+                  href="/project/new"
+                >
+                  <Plus size={16} /> New project
+                </Link>
+              </div>
             ) : null}
           </div>
 
