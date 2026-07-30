@@ -36,12 +36,20 @@ async function ensureProfile(name?: string) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return;
+  if (!user) return null;
 
-  await supabase.from("users").upsert({
-    id: user.id,
-    name: name || user.user_metadata?.name || user.email || null,
-  });
+  const { data } = await supabase
+    .from("users")
+    .upsert({
+      id: user.id,
+      email: user.email ?? null,
+      name: name || user.user_metadata?.name || user.email || null,
+      updated_at: new Date().toISOString(),
+    })
+    .select("onboarding_completed")
+    .single();
+
+  return data;
 }
 
 export async function signIn(
@@ -61,7 +69,10 @@ export async function signIn(
 
   if (error) return { error: error.message };
 
-  await ensureProfile();
+  const profile = await ensureProfile();
+  if (!profile?.onboarding_completed) {
+    redirect(`/onboarding?next=${encodeURIComponent(next)}`);
+  }
   redirect(next);
 }
 

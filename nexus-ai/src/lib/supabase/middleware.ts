@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-const privateRoutes = ["/project", "/dashboard", "/pm-dashboard", "/api/projects"];
+const privateRoutes = ["/project", "/dashboard", "/pm-dashboard", "/onboarding", "/api/projects"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -36,6 +36,23 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isPrivateRoute = privateRoutes.some((route) => pathname.startsWith(route));
   const isAuthRoute = pathname.startsWith("/login");
+  const isOnboardingRoute = pathname.startsWith("/onboarding");
+  const isCallbackRoute = pathname.startsWith("/auth/callback");
+
+  if (user && !isAuthRoute && !isOnboardingRoute && !isCallbackRoute && !pathname.startsWith("/api/")) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("onboarding_completed")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!profile?.onboarding_completed) {
+      const onboardingUrl = request.nextUrl.clone();
+      onboardingUrl.pathname = "/onboarding";
+      onboardingUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(onboardingUrl);
+    }
+  }
 
   if (isPrivateRoute && !user) {
     if (pathname.startsWith("/api/")) {

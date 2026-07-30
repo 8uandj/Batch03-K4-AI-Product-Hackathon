@@ -24,10 +24,15 @@ export type Json =
 
 export interface User {
   id: string;
+  email: string | null;
   name: string | null;
   skills: string[];
+  cv_text: string | null;
   eq_answers: Json;
+  eq_summary: Json;
+  onboarding_completed: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Project {
@@ -151,9 +156,10 @@ export type Database = {
     Tables: {
       users: TableDefinition<
         User,
-        Partial<Omit<User, 'id' | 'created_at'>> & {
+        Partial<Omit<User, 'id' | 'created_at' | 'updated_at'>> & {
           id?: string;
           created_at?: string;
+          updated_at?: string;
         },
         Partial<Omit<User, 'id'>>
       >;
