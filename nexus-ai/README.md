@@ -28,3 +28,13 @@ nexus-ai/
 - `src/app` chỉ phụ trách route/page và kết nối feature tương ứng.
 - Component dùng chung đặt trong `src/components`; component chỉ dùng cho một feature đặt trong feature đó.
 - Model dùng chung đặt trong `src/types` để các nhóm cùng sử dụng.
+
+## Trạng thái triển khai
+
+- `document-rag` (DEV 2): đã có UI upload/chat, parser PDF/text, chunking,
+  OpenAI Embeddings, Supabase pgvector retrieval, grounded streaming answer và
+  mock mode chạy không cần API key.
+- Các feature còn lại vẫn là skeleton để từng DEV triển khai độc lập.
+
+Hướng dẫn chạy và API contract của RAG:
+[`src/features/document-rag/README.md`](src/features/document-rag/README.md).
