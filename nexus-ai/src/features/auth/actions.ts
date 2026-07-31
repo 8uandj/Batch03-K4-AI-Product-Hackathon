@@ -20,6 +20,16 @@ function safeNextPath(value: string) {
   return value;
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Đã có lỗi không xác định.";
+  }
+}
+
 function getSiteUrl() {
   return (
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -60,9 +70,10 @@ export async function signIn(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error) return { error: error.message };
+  if (error) return { error: error.message || getErrorMessage(error) };
+  if (!data.user) return { error: "Không nhận được session user từ Supabase." };
 
   const profile = await ensureProfile();
   if (!profile?.onboarding_completed) {
