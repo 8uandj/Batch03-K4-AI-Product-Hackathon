@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Bot,
+  ChevronLeft,
   ChevronRight,
   FolderKanban,
   House,
@@ -29,9 +31,38 @@ function getProjectId(pathname: string) {
   return candidate;
 }
 
+const STORAGE_KEY = "nexus-sidebar-collapsed";
+
 export function Sidebar() {
   const pathname = usePathname();
   const projectId = getProjectId(pathname);
+
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(STORAGE_KEY) === "true";
+  });
+
+  // Sync --sidebar-w CSS variable so header and main offset correctly
+  useEffect(() => {
+    const update = () => {
+      const isMd = window.matchMedia("(min-width: 768px)").matches;
+      document.documentElement.style.setProperty(
+        "--sidebar-w",
+        isMd ? (collapsed ? "72px" : "288px") : "0px",
+      );
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [collapsed]);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(STORAGE_KEY, String(next));
+      return next;
+    });
+  };
 
   const workspaceItems: NavigationItem[] = [
     {
@@ -100,10 +131,25 @@ export function Sidebar() {
     },
   ];
 
+  // Avoid layout shift on first render — render expanded until mounted
+  const isCollapsed = collapsed;
+
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 flex-col border-r border-slate-200/80 bg-white/95 shadow-[12px_0_40px_-28px_rgba(15,23,42,0.35)] backdrop-blur-xl md:flex">
-        <div className="flex h-20 items-center border-b border-slate-100 px-5">
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-slate-200/80 bg-white/95 shadow-[12px_0_40px_-28px_rgba(15,23,42,0.35)] backdrop-blur-xl md:flex",
+          "transition-[width] duration-300 ease-in-out",
+          isCollapsed ? "w-[72px]" : "w-72",
+        )}
+      >
+        {/* Header */}
+        <div
+          className={cn(
+            "relative flex h-20 shrink-0 items-center border-b border-slate-100",
+            isCollapsed ? "justify-center px-0" : "px-5",
+          )}
+        >
           <Link
             className="group flex min-w-0 items-center gap-3"
             href="/"
@@ -113,63 +159,127 @@ export function Sidebar() {
               <span className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.7),transparent_48%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.65),transparent_48%)]" />
               <Sparkles className="relative" size={20} />
             </span>
-            <span className="min-w-0">
-              <span className="block truncate text-base font-black tracking-tight text-slate-950">
-                Nexus AI
+            {!isCollapsed && (
+              <span className="min-w-0 overflow-hidden">
+                <span className="block truncate text-base font-black tracking-tight text-slate-950">
+                  Nexus AI
+                </span>
+                <span className="block truncate text-xs font-medium text-slate-500">
+                  Project intelligence
+                </span>
               </span>
-              <span className="block truncate text-xs font-medium text-slate-500">
-                Project intelligence
-              </span>
-            </span>
+            )}
           </Link>
+
+          {/* Collapse toggle button */}
+          <button
+            onClick={toggleCollapsed}
+            aria-label={isCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+            className={cn(
+              "absolute -right-3.5 top-1/2 -translate-y-1/2 flex size-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-md transition hover:bg-slate-50 hover:text-slate-950 hover:shadow-lg",
+            )}
+          >
+            {isCollapsed ? (
+              <ChevronRight size={14} />
+            ) : (
+              <ChevronLeft size={14} />
+            )}
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-5">
-          <NavigationGroup items={workspaceItems} label="Workspace" />
+        {/* Navigation */}
+        <div
+          className={cn(
+            "flex-1 overflow-y-auto overflow-x-hidden py-5",
+            isCollapsed ? "px-2" : "px-4",
+          )}
+        >
+          <NavigationGroup
+            items={workspaceItems}
+            label="Workspace"
+            collapsed={isCollapsed}
+          />
           <NavigationGroup
             className="mt-7"
             items={projectItems}
             label={projectId ? "Project hiện tại" : "Công cụ dự án"}
+            collapsed={isCollapsed}
           />
         </div>
 
-        <div className="space-y-3 border-t border-slate-100 p-4">
-          <Link
-            className={cn(
-              "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950",
-              (pathname.startsWith("/profile") ||
-                pathname.startsWith("/onboarding")) &&
-                "bg-slate-950 text-white shadow-lg shadow-slate-200 hover:bg-slate-900 hover:text-white",
-            )}
-            href="/profile"
-          >
-            <span className="flex size-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 group-hover:bg-white">
-              <UserRound size={18} />
-            </span>
-            <span>Hồ sơ cá nhân</span>
-            <ChevronRight className="ml-auto opacity-50" size={16} />
-          </Link>
+        {/* Footer */}
+        <div
+          className={cn(
+            "shrink-0 border-t border-slate-100",
+            isCollapsed ? "p-2 space-y-2" : "p-4 space-y-3",
+          )}
+        >
+          {/* Profile link */}
+          <NavTooltip label="Hồ sơ cá nhân" collapsed={isCollapsed}>
+            <Link
+              href="/profile"
+              className={cn(
+                "group flex items-center rounded-2xl text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950",
+                isCollapsed
+                  ? "justify-center p-2"
+                  : "gap-3 px-3 py-3",
+                (pathname.startsWith("/profile") ||
+                  pathname.startsWith("/onboarding")) &&
+                  "bg-slate-950 text-white shadow-lg shadow-slate-200 hover:bg-slate-900 hover:text-white",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 group-hover:bg-white",
+                  (pathname.startsWith("/profile") ||
+                    pathname.startsWith("/onboarding")) &&
+                    "bg-white/10 text-cyan-200 group-hover:bg-white/10 group-hover:text-cyan-200",
+                )}
+              >
+                <UserRound size={18} />
+              </span>
+              {!isCollapsed && (
+                <>
+                  <span>Hồ sơ cá nhân</span>
+                  <ChevronRight className="ml-auto opacity-50" size={16} />
+                </>
+              )}
+            </Link>
+          </NavTooltip>
 
-          <div className="relative overflow-hidden rounded-2xl bg-slate-950 p-4 text-white">
-            <div className="absolute -right-8 -top-8 size-24 rounded-full bg-cyan-400/20 blur-2xl" />
-            <div className="relative flex items-center gap-2 text-xs font-bold text-emerald-300">
-              <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_0_4px_rgba(52,211,153,0.12)]" />
-              Nexus Core sẵn sàng
+          {/* Status badge — hidden when collapsed */}
+          {!isCollapsed && (
+            <div className="relative overflow-hidden rounded-2xl bg-slate-950 p-4 text-white">
+              <div className="absolute -right-8 -top-8 size-24 rounded-full bg-cyan-400/20 blur-2xl" />
+              <div className="relative flex items-center gap-2 text-xs font-bold text-emerald-300">
+                <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_0_4px_rgba(52,211,153,0.12)]" />
+                Nexus Core sẵn sàng
+              </div>
+              <p className="relative mt-2 text-xs leading-5 text-slate-400">
+                Docs, task và tín hiệu team trong một workspace.
+              </p>
             </div>
-            <p className="relative mt-2 text-xs leading-5 text-slate-400">
-              Docs, task và tín hiệu team trong một workspace.
-            </p>
-          </div>
+          )}
+
+          {/* Collapsed status dot */}
+          {isCollapsed && (
+            <div className="flex justify-center">
+              <span
+                title="Nexus Core sẵn sàng"
+                className="size-2.5 rounded-full bg-emerald-400 shadow-[0_0_0_4px_rgba(52,211,153,0.18)]"
+              />
+            </div>
+          )}
         </div>
       </aside>
 
+      {/* Mobile bottom nav — unchanged */}
       <nav
         aria-label="Điều hướng mobile"
         className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-2xl border border-white/70 bg-white/90 p-1.5 shadow-2xl shadow-slate-400/30 backdrop-blur-xl md:hidden"
       >
         {mobileItems.map((item) => {
           const Icon = item.icon;
-
           return (
             <Link
               aria-label={item.label}
@@ -190,50 +300,88 @@ export function Sidebar() {
   );
 }
 
+// ─── Tooltip wrapper for collapsed nav items ───────────────────────────────
+function NavTooltip({
+  label,
+  collapsed,
+  children,
+}: {
+  label: string;
+  collapsed: boolean;
+  children: React.ReactNode;
+}) {
+  if (!collapsed) return <>{children}</>;
+  return (
+    <div className="group/tip relative">
+      {children}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-lg opacity-0 transition-opacity duration-150 group-hover/tip:opacity-100"
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// ─── Navigation Group ──────────────────────────────────────────────────────
 function NavigationGroup({
   className,
   items,
   label,
+  collapsed,
 }: {
   className?: string;
   items: NavigationItem[];
   label: string;
+  collapsed: boolean;
 }) {
   return (
     <section className={className}>
-      <p className="mb-2 px-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-        {label}
-      </p>
+      {!collapsed && (
+        <p className="mb-2 px-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+          {label}
+        </p>
+      )}
+      {collapsed && <div className="mb-2 h-px bg-slate-100" />}
+
       <nav className="space-y-1">
         {items.map((item) => {
           const Icon = item.icon;
-
           return (
-            <Link
-              aria-current={item.isActive ? "page" : undefined}
-              className={cn(
-                "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition duration-200 hover:translate-x-0.5 hover:bg-slate-100 hover:text-slate-950",
-                item.isActive &&
-                  "bg-slate-950 text-white shadow-lg shadow-slate-200 hover:bg-slate-900 hover:text-white",
-              )}
-              href={item.href}
-              key={item.label}
-            >
-              <span
+            <NavTooltip key={item.label} label={item.label} collapsed={collapsed}>
+              <Link
+                aria-current={item.isActive ? "page" : undefined}
                 className={cn(
-                  "flex size-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition group-hover:bg-white group-hover:text-slate-950",
+                  "group flex items-center rounded-2xl text-sm font-semibold text-slate-600 transition duration-200 hover:bg-slate-100 hover:text-slate-950",
+                  collapsed
+                    ? "justify-center p-2 hover:translate-x-0"
+                    : "gap-3 px-3 py-2.5 hover:translate-x-0.5",
                   item.isActive &&
-                    "bg-white/10 text-cyan-200 group-hover:bg-white/10 group-hover:text-cyan-200",
+                    "bg-slate-950 text-white shadow-lg shadow-slate-200 hover:bg-slate-900 hover:text-white",
                 )}
+                href={item.href}
               >
-                <Icon size={18} />
-              </span>
-              <span className="truncate">{item.label}</span>
-              <ChevronRight
-                className="ml-auto opacity-0 transition group-hover:opacity-50"
-                size={15}
-              />
-            </Link>
+                <span
+                  className={cn(
+                    "flex size-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition group-hover:bg-white group-hover:text-slate-950",
+                    item.isActive &&
+                      "bg-white/10 text-cyan-200 group-hover:bg-white/10 group-hover:text-cyan-200",
+                  )}
+                >
+                  <Icon size={18} />
+                </span>
+                {!collapsed && (
+                  <>
+                    <span className="truncate">{item.label}</span>
+                    <ChevronRight
+                      className="ml-auto opacity-0 transition group-hover:opacity-50"
+                      size={15}
+                    />
+                  </>
+                )}
+              </Link>
+            </NavTooltip>
           );
         })}
       </nav>

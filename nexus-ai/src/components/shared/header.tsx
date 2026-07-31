@@ -29,7 +29,10 @@ export async function Header() {
   const email = user?.email || "Chế độ xem trước";
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-30 h-20 border-b border-slate-200/70 bg-white/80 backdrop-blur-xl md:left-72">
+    <header
+      className="fixed right-0 top-0 z-30 h-20 border-b border-slate-200/70 bg-white/80 backdrop-blur-xl"
+      style={{ left: "var(--sidebar-w, 0)" }}
+    >
       <div className="flex h-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-3">
           <Link

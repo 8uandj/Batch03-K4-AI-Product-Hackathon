@@ -1,5 +1,4 @@
 import OpenAI from "openai";
-import { createMockKanbanData } from "@/features/kanban-board/mock-data";
 import { requireProjectAccess } from "@/features/workspace/access";
 import type { TaskPriority } from "@/types";
 
@@ -173,14 +172,19 @@ export async function POST(request: Request, { params }: RouteContext) {
       return Response.json({ error: "Nội dung phản hồi không được để trống." }, { status: 400 });
     }
 
-    // 1. Fetch project details and members, or use the shared demo dataset.
+    // 1. Fetch project details and members
     const supabase = access.supabase;
+    if (!supabase) {
+      return Response.json(
+        { error: "Không thể kết nối cơ sở dữ liệu." },
+        { status: 503 },
+      );
+    }
+
     let members: MemberInfo[];
     let deadlineDays = 14;
 
-    if (!supabase) {
-      members = createMockKanbanData().members;
-    } else {
+    {
       const { data: projectRow } = await supabase
         .from("projects")
         .select("id,name,deadline_at")

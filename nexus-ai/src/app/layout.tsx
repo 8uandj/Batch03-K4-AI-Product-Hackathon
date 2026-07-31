@@ -20,7 +20,10 @@ export default function RootLayout({
       <body className="min-h-screen bg-slate-50 font-sans antialiased">
         <Sidebar />
         <Header />
-        <main className="min-h-screen pb-24 pt-20 md:pb-0 md:pl-72">
+        <main
+          className="min-h-screen pb-24 pt-20 md:pb-0"
+          style={{ paddingLeft: "var(--sidebar-w, 0)" }}
+        >
           <div className="mx-auto w-full max-w-screen-2xl p-4 sm:p-6 lg:p-8">
             {children}
           </div>

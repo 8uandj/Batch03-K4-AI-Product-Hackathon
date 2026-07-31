@@ -139,15 +139,16 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    // 1. Fetch live database data or fall back to mock identity properties
+    // 1. Fetch live database data
     let user: UserRow | null = null;
     let name = "Thành viên";
     let activeTasksCount = 0;
     let workloadPercentage = 0;
     let activeTasksStr = "";
 
-    if (access) {
-      const { data: userRow } = await access.supabase
+    const { supabase } = access;
+    if (supabase) {
+      const { data: userRow } = await supabase
         .from("users")
         .select("id,name,email,skills,eq_answers,eq_summary")
         .eq("id", memberId)
@@ -157,7 +158,7 @@ export async function POST(request: Request, { params }: RouteContext) {
         user = userRow as UserRow;
         name = user.name || user.email?.split("@")[0] || user.id.slice(0, 8);
 
-        const { data: taskRows } = await access.supabase
+        const { data: taskRows } = await supabase
           .from("tasks")
           .select("title,status,priority")
           .eq("project_id", projectId)

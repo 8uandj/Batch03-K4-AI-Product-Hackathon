@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import OpenAI from "openai";
-import { createMockKanbanData } from "@/features/kanban-board/mock-data";
 import { requireProjectAccess } from "@/features/workspace/access";
 import type { TaskPriority } from "@/types";
 
@@ -176,16 +175,10 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const supabase = access.supabase;
     if (!supabase) {
-      const mockData = createMockKanbanData();
-      const deadlineDays = 14;
-      const tasks = createMockDrafts(mockData.members, deadlineDays);
-
-      return Response.json({
-        recommendationId: randomUUID(),
-        tasks,
-        mode: "mock",
-        deadlineDays,
-      });
+      return Response.json(
+        { error: "Không thể kết nối cơ sở dữ liệu." },
+        { status: 503 },
+      );
     }
 
     // 1. Fetch project details and members
