@@ -137,6 +137,7 @@ export async function getKanbanBoardData(
   return {
     projectId,
     projectName: project.name,
+    currentUserId: access.user.id,
     documentSummary: buildPlannerDocumentContext(
       summaryResult.data?.content,
       documentsResult.data ?? [],

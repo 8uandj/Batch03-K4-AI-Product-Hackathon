@@ -25,6 +25,7 @@ export type KanbanTask = {
 export type KanbanBoardData = {
   projectId: string;
   projectName: string;
+  currentUserId: string;
   documentSummary: string;
   tasks: KanbanTask[];
   members: KanbanMember[];

@@ -14,12 +14,15 @@ import {
 } from "@dnd-kit/core";
 import {
   CheckCircle2,
+  ChevronDown,
   Circle,
   Clock3,
   HeartHandshake,
+  LayoutDashboard,
   RefreshCw,
   ShieldAlert,
   Sparkles,
+  UserRound,
   UsersRound,
   WandSparkles,
   X,
@@ -28,6 +31,10 @@ import {
 import type { TaskStatus } from "@/types";
 import { getOverdueHours } from "@/features/deadline-monitor/rules";
 
+import {
+  filterKanbanTasksByScope,
+  type KanbanBoardScope,
+} from "../scope";
 import type { KanbanBoardData, KanbanTask } from "../types";
 import { AutoTaskingDialog } from "./AutoTaskingDialog";
 import { KanbanColumn } from "./KanbanColumn";
@@ -42,6 +49,7 @@ type ToastState = {
 
 export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
   const [tasks, setTasks] = useState(initialData.tasks);
+  const [boardScope, setBoardScope] = useState<KanbanBoardScope>("team");
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
   const [showAutoTasking, setShowAutoTasking] = useState(false);
   const [monitoring, setMonitoring] = useState(false);
@@ -51,21 +59,30 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
     useSensor(KeyboardSensor),
   );
 
+  const visibleTasks = useMemo(
+    () =>
+      filterKanbanTasksByScope(
+        tasks,
+        boardScope,
+        initialData.currentUserId,
+      ),
+    [boardScope, initialData.currentUserId, tasks],
+  );
   const tasksByStatus = useMemo(
     () =>
       Object.fromEntries(
         statuses.map((status) => [
           status,
-          tasks.filter((task) => task.status === status),
+          visibleTasks.filter((task) => task.status === status),
         ]),
       ) as Record<TaskStatus, KanbanTask[]>,
-    [tasks],
+    [visibleTasks],
   );
-  const completion = tasks.length
-    ? Math.round((tasksByStatus.done.length / tasks.length) * 100)
+  const completion = visibleTasks.length
+    ? Math.round((tasksByStatus.done.length / visibleTasks.length) * 100)
     : 0;
   const overdueSummary = useMemo(() => {
-    const overdue = tasks
+    const overdue = visibleTasks
       .map((task) => ({ task, hours: getOverdueHours(task) }))
       .filter(
         (
@@ -82,10 +99,17 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
         (item) => item.hours >= initialData.deadlineEscalationHours,
       ).length,
     };
-  }, [initialData.deadlineEscalationHours, tasks]);
+  }, [initialData.deadlineEscalationHours, visibleTasks]);
+
+  const currentMember = initialData.members.find(
+    (member) => member.id === initialData.currentUserId,
+  );
+  const isPersonalBoard = boardScope === "personal";
 
   function onDragStart(event: DragStartEvent) {
-    setActiveTask(tasks.find((task) => task.id === event.active.id) ?? null);
+    setActiveTask(
+      visibleTasks.find((task) => task.id === event.active.id) ?? null,
+    );
   }
 
   async function onDragEnd(event: DragEndEvent) {
@@ -214,24 +238,67 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
             </p>
           </div>
 
-          <button
-            className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-sm font-black text-violet-800 shadow-xl shadow-slate-950/20 transition hover:-translate-y-0.5 hover:shadow-2xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 sm:w-auto"
-            disabled={!initialData.canAutoTask}
-            onClick={() => setShowAutoTasking(true)}
-            title={
-              initialData.canAutoTask
-                ? "Tạo task bằng AI"
-                : "Chỉ PM mới có thể chạy Auto-Tasking"
-            }
-            type="button"
-          >
-            <WandSparkles
-              aria-hidden="true"
-              className="transition group-hover:rotate-12"
-              size={18}
-            />
-            AI Auto-Tasking
-          </button>
+          <div className="flex w-full flex-col gap-3 sm:flex-row xl:w-auto">
+            <div className="flex min-w-56 items-center gap-3 rounded-2xl bg-white/10 px-4 py-2.5 ring-1 ring-white/20 backdrop-blur">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-cyan-200">
+                {isPersonalBoard ? (
+                  <UserRound aria-hidden="true" size={17} />
+                ) : (
+                  <UsersRound aria-hidden="true" size={17} />
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <label
+                  className="block text-[9px] font-black uppercase tracking-[0.16em] text-indigo-200"
+                  htmlFor="kanban-board-scope"
+                >
+                  Board view
+                </label>
+                <div className="relative">
+                  <select
+                    className="w-full cursor-pointer appearance-none bg-transparent py-0.5 pr-6 text-sm font-black text-white outline-none"
+                    id="kanban-board-scope"
+                    onChange={(event) => {
+                      setBoardScope(event.target.value as KanbanBoardScope);
+                      setActiveTask(null);
+                    }}
+                    value={boardScope}
+                  >
+                    <option className="text-slate-900" value="personal">
+                      Personal board
+                    </option>
+                    <option className="text-slate-900" value="team">
+                      Team board
+                    </option>
+                  </select>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-indigo-200"
+                    size={15}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-sm font-black text-violet-800 shadow-xl shadow-slate-950/20 transition hover:-translate-y-0.5 hover:shadow-2xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 sm:w-auto"
+              disabled={!initialData.canAutoTask}
+              onClick={() => setShowAutoTasking(true)}
+              title={
+                initialData.canAutoTask
+                  ? "Tạo task bằng AI"
+                  : "Chỉ PM mới có thể chạy Auto-Tasking"
+              }
+              type="button"
+            >
+              <WandSparkles
+                aria-hidden="true"
+                className="transition group-hover:rotate-12"
+                size={18}
+              />
+              AI Auto-Tasking
+            </button>
+          </div>
         </div>
 
         <div className="relative mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -327,6 +394,40 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
           </button>
         </div>
       ) : null}
+
+      <section className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span
+            className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${
+              isPersonalBoard
+                ? "bg-violet-100 text-violet-700"
+                : "bg-cyan-100 text-cyan-700"
+            }`}
+          >
+            {isPersonalBoard ? (
+              <UserRound aria-hidden="true" size={20} />
+            ) : (
+              <LayoutDashboard aria-hidden="true" size={20} />
+            )}
+          </span>
+          <div>
+            <h2 className="text-sm font-black text-slate-950">
+              {isPersonalBoard
+                ? `Personal board${currentMember ? ` · ${currentMember.name}` : ""}`
+                : "Team board"}
+            </h2>
+            <p className="mt-0.5 text-xs leading-5 text-slate-500">
+              {isPersonalBoard
+                ? "Chỉ hiển thị các task được giao cho bạn."
+                : "Hiển thị toàn bộ task và người phụ trách trong project."}
+            </p>
+          </div>
+        </div>
+        <span className="w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">
+          {visibleTasks.length}
+          {isPersonalBoard ? `/${tasks.length}` : ""} task
+        </span>
+      </section>
 
       <DndContext
         collisionDetection={closestCorners}
