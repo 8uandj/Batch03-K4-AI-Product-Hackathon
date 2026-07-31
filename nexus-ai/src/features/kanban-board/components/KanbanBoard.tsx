@@ -151,13 +151,23 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
         }
       });
     void reconcileTaskStatuses();
-    const pollingInterval = window.setInterval(() => {
-      void reconcileTaskStatuses();
-    }, 15_000);
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/projects/${initialData.projectId}/tasks`, {
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (data.tasks && !disposed) {
+          setTasks((current) => applyKanbanTaskStatusSnapshot(current, data.tasks));
+        }
+      } catch {
+        // non-blocking
+      }
+    }, 2000);
 
     return () => {
       disposed = true;
-      window.clearInterval(pollingInterval);
+      clearInterval(pollInterval);
       void supabase.removeChannel(channel);
     };
   }, [initialData.dataSource, initialData.projectId]);
@@ -244,27 +254,30 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
     );
 
     if (nextStatus === "rework") {
-      const reworkData = {
-        taskId: currentTask.id,
-        taskTitle: currentTask.title,
-        assigneeId: currentTask.assigneeId,
-        assigneeName: currentTask.assigneeName,
-        dueAt: currentTask.dueAt,
-        projectId: initialData.projectId,
-        projectName: initialData.projectName,
-        timestamp: Date.now(),
-      };
-      try {
-        window.localStorage.setItem(
-          `nexus-rework-task:${initialData.projectId}`,
-          JSON.stringify(reworkData),
+      // ONLY trigger local chatbot event IF current user IS the assigned member of this task!
+      if (currentTask.assigneeId === initialData.currentUserId) {
+        const reworkData = {
+          taskId: currentTask.id,
+          taskTitle: currentTask.title,
+          assigneeId: currentTask.assigneeId,
+          assigneeName: currentTask.assigneeName,
+          dueAt: currentTask.dueAt,
+          projectId: initialData.projectId,
+          projectName: initialData.projectName,
+          timestamp: Date.now(),
+        };
+        try {
+          window.localStorage.setItem(
+            `nexus-rework-task:${initialData.projectId}`,
+            JSON.stringify(reworkData),
+          );
+        } catch {
+          // storage fallback
+        }
+        window.dispatchEvent(
+          new CustomEvent("kanban-task-rework", { detail: reworkData }),
         );
-      } catch {
-        // storage fallback
       }
-      window.dispatchEvent(
-        new CustomEvent("kanban-task-rework", { detail: reworkData }),
-      );
     }
 
     if (initialData.dataSource === "mock") {
