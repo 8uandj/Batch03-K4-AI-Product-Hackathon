@@ -558,10 +558,13 @@ export function ProjectAiPlanner({
                 Hủy bản nháp
               </button>
               <button
-                className="rounded-xl bg-gradient-to-r from-violet-700 to-indigo-600 px-5 py-2.5 text-xs font-black text-white shadow-md shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-lg"
+                className="rounded-xl bg-gradient-to-r from-violet-700 to-indigo-600 px-5 py-2.5 text-xs font-black text-white shadow-md shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isInitializing || isChatLoading || tasks.length === 0}
                 onClick={handleApprovePlanner}
               >
-                Phê duyệt & Đồng bộ sang Kanban
+                {isInitializing
+                  ? "Đang đồng bộ..."
+                  : "Phê duyệt & Đồng bộ sang Kanban"}
               </button>
             </div>
           </div>

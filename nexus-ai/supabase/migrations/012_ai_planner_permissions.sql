@@ -1,4 +1,6 @@
 -- RLS policies to allow project PMs to manage AI recommendations.
+-- Allow project PMs to persist and negotiate AI Planner drafts.
+-- The planner routes already require PM access; RLS remains the database guard.
 drop policy if exists "PM can manage AI recommendations"
   on public.ai_recommendations;
 

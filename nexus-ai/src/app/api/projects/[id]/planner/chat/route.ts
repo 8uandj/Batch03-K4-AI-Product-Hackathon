@@ -1,17 +1,15 @@
 import OpenAI from "openai";
-import { requireProjectAccess } from "@/features/workspace/access";
-import type { TaskPriority } from "@/types";
+import {
+  ProjectAccessError,
+  requireProjectAccess,
+} from "@/features/workspace/access";
+import {
+  PlannerValidationError,
+  type PlannerTaskDraft as TaskDraft,
+  validatePlannerTasks,
+} from "@/features/workspace/planner-validation";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-type TaskDraft = {
-  title: string;
-  description: string;
-  priority: TaskPriority;
-  assignee_id: string;
-  required_skills: string[];
-  due_in_days: number;
-};
 
 type MemberInfo = {
   id: string;
@@ -37,7 +35,8 @@ function removeDiacritics(str: string): string {
 function negotiateTasksProgrammatically(
   message: string,
   currentTasks: TaskDraft[],
-  members: MemberInfo[]
+  members: MemberInfo[],
+  maxDueDays: number,
 ): { message: string; tasks: TaskDraft[] } {
   const lowercaseMsg = message.toLowerCase();
   const normMsg = removeDiacritics(lowercaseMsg);
@@ -65,7 +64,10 @@ function negotiateTasksProgrammatically(
     }
 
     updatedTasks.forEach((task) => {
-      task.due_in_days = Math.max(1, task.due_in_days + daysToAdd);
+      task.due_in_days = Math.min(
+        maxDueDays,
+        Math.max(1, task.due_in_days + daysToAdd),
+      );
     });
 
     if (daysToAdd > 0) {
@@ -136,7 +138,7 @@ function negotiateTasksProgrammatically(
       priority: "medium",
       assignee_id: members[0]?.id || "pm",
       required_skills: ["General"],
-      due_in_days: 5,
+      due_in_days: Math.min(5, maxDueDays),
     };
     updatedTasks.push(newFallbackTask);
     text = `Đã bổ sung task mới "${taskTitle}" vào kế hoạch và gán tạm thời cho ${members[0]?.name || "PM"}.`;
@@ -165,8 +167,19 @@ export async function POST(request: Request, { params }: RouteContext) {
     };
 
     const userMessage = body.message?.trim();
-    const currentTasks = body.tasks ?? [];
-    const history = body.history ?? [];
+    const rawCurrentTasks = body.tasks ?? [];
+    const history = (body.history ?? [])
+      .filter(
+        (message) =>
+          (message.role === "user" || message.role === "assistant") &&
+          typeof message.content === "string" &&
+          message.content.trim(),
+      )
+      .slice(-8)
+      .map((message) => ({
+        role: message.role,
+        content: message.content.trim().slice(0, 4000),
+      }));
 
     if (!userMessage) {
       return Response.json({ error: "Nội dung phản hồi không được để trống." }, { status: 400 });
@@ -218,6 +231,19 @@ export async function POST(request: Request, { params }: RouteContext) {
       }
     }
 
+    if (!members.length) {
+      return Response.json(
+        { error: "Project chưa có thành viên để AI phân công." },
+        { status: 400 },
+      );
+    }
+
+    const currentTasks = validatePlannerTasks(
+      rawCurrentTasks,
+      members.map((member) => member.id),
+      { maxDueDays: deadlineDays },
+    );
+
     let resultMessage = "";
     let updatedTasks: TaskDraft[] = [];
     let processed = false;
@@ -242,7 +268,7 @@ export async function POST(request: Request, { params }: RouteContext) {
                 "Hãy giữ nguyên các task khác không bị ảnh hưởng bởi yêu cầu của PM.",
               ].join("\n"),
             },
-            ...history.slice(-8), // Send last 8 messages
+            ...history,
             {
               role: "user",
               content: JSON.stringify({
@@ -295,9 +321,22 @@ export async function POST(request: Request, { params }: RouteContext) {
 
         const content = response.choices[0]?.message?.content;
         if (content) {
-          const parsed = JSON.parse(content) as { message: string; tasks: TaskDraft[] };
-          resultMessage = parsed.message;
-          updatedTasks = parsed.tasks;
+          const parsed = JSON.parse(content) as {
+            message?: unknown;
+            tasks?: unknown;
+          };
+          resultMessage =
+            typeof parsed.message === "string"
+              ? parsed.message.trim().slice(0, 4000)
+              : "";
+          updatedTasks = validatePlannerTasks(
+            parsed.tasks,
+            members.map((member) => member.id),
+            { maxDueDays: deadlineDays },
+          );
+          if (!resultMessage) {
+            throw new PlannerValidationError("AI không trả về nội dung phản hồi.");
+          }
           processed = true;
         }
       } catch (err) {
@@ -307,20 +346,33 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     // 3. Simulated fallback response
     if (!processed) {
-      const fallbackResult = negotiateTasksProgrammatically(userMessage, currentTasks, members);
+      const fallbackResult = negotiateTasksProgrammatically(
+        userMessage,
+        currentTasks,
+        members,
+        deadlineDays,
+      );
       resultMessage = fallbackResult.message;
-      updatedTasks = fallbackResult.tasks;
+      updatedTasks = validatePlannerTasks(
+        fallbackResult.tasks,
+        members.map((member) => member.id),
+        { maxDueDays: deadlineDays },
+      );
     }
 
     // 4. Update the stored recommendation payload
     if (supabase && body.recommendationId) {
-      await supabase
+      const { error: updateError } = await supabase
         .from("ai_recommendations")
         .update({
           payload: { tasks: updatedTasks, mode: processed ? "openai" : "mock", deadlineDays },
           created_at: new Date().toISOString(),
         })
-        .eq("id", body.recommendationId);
+        .eq("id", body.recommendationId)
+        .eq("project_id", projectId)
+        .eq("type", "task_assignment")
+        .eq("status", "suggested");
+      if (updateError) throw new Error(updateError.message);
     }
 
     return Response.json({
@@ -328,9 +380,15 @@ export async function POST(request: Request, { params }: RouteContext) {
       tasks: updatedTasks,
     });
   } catch (error) {
+    const status =
+      error instanceof ProjectAccessError
+        ? error.status
+        : error instanceof PlannerValidationError
+          ? 400
+          : 500;
     return Response.json(
       { error: error instanceof Error ? error.message : "Không thể đàm phán với AI." },
-      { status: 500 },
+      { status },
     );
   }
 }

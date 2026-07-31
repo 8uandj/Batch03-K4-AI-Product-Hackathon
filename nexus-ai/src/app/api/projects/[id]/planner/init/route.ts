@@ -1,18 +1,17 @@
 import { randomUUID } from "node:crypto";
 import OpenAI from "openai";
-import { requireProjectAccess } from "@/features/workspace/access";
-import type { TaskPriority } from "@/types";
+import {
+  ProjectAccessError,
+  requireProjectAccess,
+} from "@/features/workspace/access";
+import {
+  buildPlannerDocumentContext,
+  PlannerValidationError,
+  type PlannerTaskDraft as TaskDraft,
+  validatePlannerTasks,
+} from "@/features/workspace/planner-validation";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-type TaskDraft = {
-  title: string;
-  description: string;
-  priority: TaskPriority;
-  assignee_id: string;
-  required_skills: string[];
-  due_in_days: number;
-};
 
 type MemberInfo = {
   id: string;
@@ -134,7 +133,7 @@ function generateDynamicFallbackTasks(
   return selectedTemplates.map((template, index) => {
     // Find member with the most matching skills, fallback to round-robin
     let assignedMember = members[index % members.length];
-    let maxMatchCount = -1;
+    let maxMatchCount = 0;
 
     for (const member of members) {
       const matchCount = member.skills.filter(s =>
@@ -218,17 +217,32 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    // 2. Fetch document summary context
-    const { data: summaryRow } = await supabase
-      .from("ai_summaries")
-      .select("content")
-      .eq("project_id", projectId)
-      .eq("type", "project_brief")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // 2. Prefer a generated summary, but fall back to actual document chunks.
+    // The current upload flow does not always create an ai_summaries row.
+    const [summaryResult, documentsResult] = await Promise.all([
+      supabase
+        .from("ai_summaries")
+        .select("content")
+        .eq("project_id", projectId)
+        .eq("type", "project_brief")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("documents")
+        .select("filename,content")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: true })
+        .limit(30),
+    ]);
+    if (summaryResult.error) throw new Error(summaryResult.error.message);
+    if (documentsResult.error) throw new Error(documentsResult.error.message);
 
-    const documentSummary = summaryRow?.content || projectRow.description || "Dự án Nexus AI";
+    const documentSummary = buildPlannerDocumentContext(
+      summaryResult.data?.content,
+      documentsResult.data ?? [],
+      projectRow.description || "Dự án Nexus AI",
+    );
 
     // Calculate deadline days
     const deadlineAt = projectRow.deadline_at;
@@ -311,8 +325,12 @@ export async function POST(request: Request, { params }: RouteContext) {
 
         const content = response.choices[0]?.message?.content;
         if (content) {
-          const parsed = JSON.parse(content) as { tasks: TaskDraft[] };
-          tasks = parsed.tasks;
+          const parsed = JSON.parse(content) as { tasks?: unknown };
+          tasks = validatePlannerTasks(
+            parsed.tasks,
+            members.map((member) => member.id),
+            { maxDueDays: deadlineDays },
+          );
           mode = "openai";
         }
       } catch (err) {
@@ -324,17 +342,23 @@ export async function POST(request: Request, { params }: RouteContext) {
       tasks = generateDynamicFallbackTasks(projectRow.name, documentSummary, members, deadlineDays);
       mode = "mock";
     }
+    tasks = validatePlannerTasks(
+      tasks,
+      members.map((member) => member.id),
+      { maxDueDays: deadlineDays },
+    );
 
     // 4. Save recommendation as suggested draft (only in database mode)
     let recommendationId = randomUUID();
     if (projectId !== "demo") {
       // Clear any existing active planners
-      await supabase
+      const { error: clearError } = await supabase
         .from("ai_recommendations")
         .delete()
         .eq("project_id", projectId)
         .eq("type", "task_assignment")
         .eq("status", "suggested");
+      if (clearError) throw new Error(clearError.message);
 
       const { data: recData, error: recError } = await supabase
         .from("ai_recommendations")
@@ -360,9 +384,15 @@ export async function POST(request: Request, { params }: RouteContext) {
       deadlineDays,
     });
   } catch (error) {
+    const status =
+      error instanceof ProjectAccessError
+        ? error.status
+        : error instanceof PlannerValidationError
+          ? 400
+          : 500;
     return Response.json(
       { error: error instanceof Error ? error.message : "Không thể khởi tạo AI Planner." },
-      { status: 500 },
+      { status },
     );
   }
 }
