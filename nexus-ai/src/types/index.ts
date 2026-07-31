@@ -396,6 +396,12 @@ export type Database = {
         };
         Returns: string;
       };
+      request_project_membership: {
+        Args: {
+          target_project_id: string;
+        };
+        Returns: string;
+      };
       reject_project_invite: {
         Args: {
           invite_id: string;

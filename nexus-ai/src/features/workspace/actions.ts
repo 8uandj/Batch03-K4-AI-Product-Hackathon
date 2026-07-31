@@ -7,6 +7,7 @@ import { requireProjectAccess } from "./access";
 
 type WorkspaceActionState = {
   error?: string;
+  message?: string;
 };
 
 function getString(formData: FormData, key: string) {
@@ -93,7 +94,13 @@ export async function createInvite(
     const { supabase } = await requireUser();
     const inviteLinks: Array<{ recipient: string; link: string; emailSent: boolean }> = [];
     const failures: string[] = [];
-    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+    const vercelHost =
+      process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+    const siteUrl = (
+      vercelHost
+        ? `https://${vercelHost.replace(/^https?:\/\//, "")}`
+        : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+    ).replace(/\/$/, "");
 
     for (const recipient of invitees) {
       const isEmail = recipient.includes("@");
@@ -279,7 +286,7 @@ export async function joinProjectWithInput(
     const input = getString(formData, "input");
     if (!input) return { error: "Vui lòng nhập Project ID hoặc Link Invite." };
 
-    const { supabase, user } = await requireUser();
+    const { supabase } = await requireUser();
 
     // Check if it is a UUID (Project ID)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -288,43 +295,16 @@ export async function joinProjectWithInput(
         redirect(`/project/demo`);
       }
 
-      // Check if project exists
-      const { data: project, error: projectError } = await supabase
-        .from("projects")
-        .select("id")
-        .eq("id", input)
-        .maybeSingle();
+      const { data: projectId, error: requestError } = await supabase.rpc(
+        "request_project_membership",
+        { target_project_id: input },
+      );
 
-      if (projectError || !project) {
-        return { error: "Không tìm thấy project với ID này." };
+      if (requestError || !projectId) {
+        return { error: requestError?.message || "Không thể gửi yêu cầu tham gia project." };
       }
 
-      // Check if already a member
-      const { data: member } = await supabase
-        .from("project_members")
-        .select("role")
-        .eq("project_id", input)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (member) {
-        redirect(`/project/${input}`);
-      }
-
-      // Insert member
-      const { error: insertError } = await supabase
-        .from("project_members")
-        .insert({
-          project_id: input,
-          user_id: user.id,
-          role: "member",
-        });
-
-      if (insertError) {
-        return { error: insertError.message };
-      }
-
-      redirect(`/project/${input}`);
+      return { message: "Đã gửi yêu cầu tham gia. PM sẽ duyệt trước khi bạn truy cập project." };
     }
 
     // Otherwise, treat as invite link or token
@@ -347,7 +327,7 @@ export async function joinProjectWithInput(
       return { error: inviteError?.message || "Mã invite không hợp lệ hoặc đã hết hạn." };
     }
 
-    redirect(`/project/${projectId}`);
+    redirect(`/join/${token}?status=pending`);
   } catch (error) {
     const digest =
       typeof error === "object" && error && "digest" in error

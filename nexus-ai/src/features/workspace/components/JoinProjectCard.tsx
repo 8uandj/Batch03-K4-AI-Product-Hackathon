@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { UserPlus, Info } from "lucide-react";
 import { joinProjectWithInput } from "@/features/workspace/actions";
 
-const initialState: { error?: string } = {};
+const initialState: { error?: string; message?: string } = {};
 
 export function JoinProjectCard() {
   const [state, action, pending] = useActionState(joinProjectWithInput, initialState);
@@ -39,6 +39,11 @@ export function JoinProjectCard() {
         {state.error && (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
             {state.error}
+          </div>
+        )}
+        {state.message && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+            {state.message}
           </div>
         )}
 
