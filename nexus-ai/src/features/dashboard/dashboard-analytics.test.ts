@@ -85,16 +85,18 @@ test("fetch Supabase ánh xạ dữ liệu và bỏ status ngoài schema", async
       select: async () => ({
         data: [
           {
-            id: 10,
+            id: "10",
             title: "Task hợp lệ",
             status: "done",
             updated_at: "2026-07-30T10:00:00.000Z",
+            assignee_id: null,
           },
           {
-            id: 11,
+            id: "11",
             title: "Task sai status",
             status: "blocked",
             updated_at: "2026-07-30T10:00:00.000Z",
+            assignee_id: null,
           },
         ],
         error: null,

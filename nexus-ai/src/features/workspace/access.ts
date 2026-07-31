@@ -11,6 +11,14 @@ export class ProjectAccessError extends Error {
 }
 
 export async function requireProjectAccess(projectId: string) {
+  if (projectId === "demo" && process.env.RAG_MODE !== "supabase") {
+    return {
+      supabase: null,
+      user: { id: "mock-demo-user" },
+      role: "pm" as const,
+    };
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -19,10 +27,6 @@ export async function requireProjectAccess(projectId: string) {
 
   if (error || !user) {
     throw new ProjectAccessError("Bạn cần đăng nhập để truy cập project.", 401);
-  }
-
-  if (projectId === "demo") {
-    return { supabase, user, role: "pm" as const };
   }
 
   const { data: membership, error: membershipError } = await supabase

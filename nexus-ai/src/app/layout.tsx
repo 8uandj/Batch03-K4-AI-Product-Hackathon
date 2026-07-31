@@ -17,11 +17,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
-      <body className="min-h-screen font-sans antialiased">
+      <body className="min-h-screen bg-slate-50 font-sans antialiased">
         <Sidebar />
         <Header />
-        <main className="min-h-screen pl-16 pt-16">
-          <div className="mx-auto w-full max-w-screen-2xl p-6">{children}</div>
+        <main className="min-h-screen pb-24 pt-20 md:pb-0 md:pl-72">
+          <div className="mx-auto w-full max-w-screen-2xl p-4 sm:p-6 lg:p-8">
+            {children}
+          </div>
         </main>
       </body>
     </html>
