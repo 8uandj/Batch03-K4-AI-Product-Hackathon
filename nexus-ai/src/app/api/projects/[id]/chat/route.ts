@@ -54,7 +54,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       ),
     );
 
-    if (ragConfig.mode === "mock") {
+    if (!process.env.OPENAI_API_KEY) {
       return new Response(buildMockAnswer(sources, projectName), {
         headers: {
           "content-type": "text/plain; charset=utf-8",
