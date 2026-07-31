@@ -286,18 +286,37 @@ export function ProjectOverview({
                           <h3 className="font-semibold text-slate-900">{item.title}</h3>
                           <p className="mt-1 text-sm text-slate-500">Cho: {item.member}</p>
                         </div>
-                        <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
-                          {item.confidence}%
-                        </span>
+                        {item.confidence > 0 ? (
+                          <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+                            {item.confidence}%
+                          </span>
+                        ) : null}
                       </div>
                       <p className="mt-3 text-sm leading-6 text-slate-600">
                         {item.rationale}
                       </p>
+                      {item.suggestedTasks.length ? (
+                        <ul className="mt-3 space-y-2">
+                          {item.suggestedTasks.map((task, index) => (
+                            <li
+                              className="flex gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700"
+                              key={`${item.id}-${index}`}
+                            >
+                              <CheckCircle2
+                                aria-hidden="true"
+                                className="mt-0.5 shrink-0 text-emerald-600"
+                                size={15}
+                              />
+                              <span>{task}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </article>
                   ))}
                 </div>
               ) : (
-                <EmptyState text="Chưa có AI recommendations. Sau khi RAG/Onboarding/Kanban hoàn thiện, worker AI sẽ ghi vào bảng này." />
+                <EmptyState text="Chưa có đề xuất. Bấm “Chạy AI analysis” để tạo task từ tài liệu và hồ sơ thành viên." />
               )}
             </section>
 
@@ -322,7 +341,7 @@ export function ProjectOverview({
                   ))}
                 </div>
               ) : (
-                <EmptyState text="Chưa có risk event. Dashboard nâng cao sẽ ghi lịch sử cảnh báo vào bảng risk_events." />
+                <EmptyState text="Chưa phát hiện overdue hoặc overload. Risk mới sẽ hiện tại đây sau AI analysis." />
               )}
             </section>
           </div>

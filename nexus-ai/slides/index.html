@@ -1,0 +1,1288 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Bộ slide demo 6 trang cho sản phẩm Nexus AI."
+    />
+    <title>Nexus AI — Demo Deck</title>
+    <style>
+      :root {
+        --ink: #0b1220;
+        --muted: #596579;
+        --line: rgba(15, 23, 42, 0.12);
+        --paper: #f7f8fb;
+        --white: #ffffff;
+        --navy: #111d45;
+        --violet: #6d5dfc;
+        --cyan: #12b9c8;
+        --orange: #ff8a3d;
+        --lime: #c9f270;
+        --danger: #e35555;
+        --shadow: 0 30px 90px rgba(17, 29, 69, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #11172b;
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .deck {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        isolation: isolate;
+      }
+
+      .slide {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        width: 100%;
+        height: 100%;
+        padding: clamp(28px, 4.1vw, 72px) clamp(30px, 5.5vw, 104px)
+          clamp(24px, 3.3vw, 60px);
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 92% 7%, rgba(109, 93, 252, 0.12), transparent 25%),
+          radial-gradient(circle at 6% 94%, rgba(18, 185, 200, 0.09), transparent 28%),
+          var(--paper);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(54px) scale(0.985);
+        transition:
+          opacity 420ms ease,
+          transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1),
+          visibility 0ms linear 520ms;
+      }
+
+      .slide::after {
+        content: "";
+        position: absolute;
+        right: -8vw;
+        bottom: -18vw;
+        z-index: -1;
+        width: 40vw;
+        aspect-ratio: 1;
+        border: 1px solid rgba(109, 93, 252, 0.1);
+        border-radius: 50%;
+        box-shadow:
+          0 0 0 5vw rgba(109, 93, 252, 0.025),
+          0 0 0 10vw rgba(18, 185, 200, 0.02);
+      }
+
+      .slide.active {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(0) scale(1);
+        transition-delay: 0ms;
+      }
+
+      .slide.exit-left {
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(-54px) scale(0.985);
+      }
+
+      .slide.dark {
+        color: var(--white);
+        background:
+          radial-gradient(circle at 80% 12%, rgba(109, 93, 252, 0.5), transparent 28%),
+          radial-gradient(circle at 8% 100%, rgba(18, 185, 200, 0.22), transparent 34%),
+          linear-gradient(135deg, #090f20 0%, #111d45 60%, #101735 100%);
+      }
+
+      .slide.dark::after {
+        border-color: rgba(255, 255, 255, 0.08);
+        box-shadow:
+          0 0 0 5vw rgba(255, 255, 255, 0.015),
+          0 0 0 10vw rgba(255, 255, 255, 0.012);
+      }
+
+      .topline,
+      .footer {
+        position: relative;
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 11px;
+        font-size: clamp(12px, 1vw, 16px);
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .brand-mark {
+        position: relative;
+        width: 26px;
+        height: 26px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--cyan), var(--violet));
+        box-shadow: 0 8px 22px rgba(109, 93, 252, 0.26);
+      }
+
+      .brand-mark::before,
+      .brand-mark::after {
+        content: "";
+        position: absolute;
+        width: 7px;
+        height: 7px;
+        border: 2px solid white;
+        border-radius: 50%;
+      }
+
+      .brand-mark::before {
+        top: 5px;
+        left: 5px;
+      }
+
+      .brand-mark::after {
+        right: 5px;
+        bottom: 5px;
+      }
+
+      .eyebrow {
+        color: var(--violet);
+        font-size: clamp(11px, 0.86vw, 14px);
+        font-weight: 850;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .dark .eyebrow {
+        color: #9ef3f5;
+      }
+
+      .timing {
+        padding: 7px 11px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: clamp(11px, 0.82vw, 14px);
+        font-weight: 700;
+      }
+
+      .dark .timing {
+        border-color: rgba(255, 255, 255, 0.14);
+        color: rgba(255, 255, 255, 0.72);
+      }
+
+      .content {
+        position: relative;
+        z-index: 2;
+        min-height: 0;
+        padding: clamp(20px, 3vw, 50px) 0 clamp(12px, 2vw, 32px);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1,
+      h2 {
+        max-width: 1040px;
+        margin-bottom: clamp(14px, 1.6vw, 24px);
+        font-size: clamp(38px, 5vw, 86px);
+        line-height: 0.98;
+        letter-spacing: -0.052em;
+      }
+
+      h2 {
+        font-size: clamp(34px, 4.15vw, 70px);
+      }
+
+      .lede {
+        max-width: 900px;
+        margin-bottom: clamp(22px, 3vw, 44px);
+        color: var(--muted);
+        font-size: clamp(15px, 1.45vw, 24px);
+        line-height: 1.5;
+      }
+
+      .dark .lede {
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .accent {
+        color: var(--violet);
+      }
+
+      .dark .accent {
+        color: #9ef3f5;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+        gap: clamp(24px, 4vw, 70px);
+        align-items: center;
+        height: 100%;
+      }
+
+      .cards-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: clamp(12px, 1.4vw, 22px);
+      }
+
+      .card {
+        position: relative;
+        padding: clamp(17px, 1.8vw, 28px);
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: 0 18px 48px rgba(17, 29, 69, 0.07);
+      }
+
+      .dark .card {
+        border-color: rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.065);
+        box-shadow: none;
+      }
+
+      .card h3 {
+        margin-bottom: 8px;
+        font-size: clamp(16px, 1.4vw, 23px);
+        letter-spacing: -0.02em;
+      }
+
+      .card p {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: clamp(12px, 1vw, 16px);
+        line-height: 1.5;
+      }
+
+      .dark .card p {
+        color: rgba(255, 255, 255, 0.66);
+      }
+
+      .number {
+        display: block;
+        margin-bottom: 10px;
+        color: var(--violet);
+        font-size: clamp(34px, 4vw, 68px);
+        font-weight: 900;
+        line-height: 0.9;
+        letter-spacing: -0.06em;
+      }
+
+      .dark .number {
+        color: #9ef3f5;
+      }
+
+      .job-statement {
+        padding: clamp(18px, 2vw, 30px);
+        border-left: 5px solid var(--orange);
+        border-radius: 0 22px 22px 0;
+        background: rgba(255, 255, 255, 0.68);
+        font-size: clamp(17px, 1.55vw, 25px);
+        font-weight: 700;
+        line-height: 1.45;
+      }
+
+      .evidence-note {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        margin-top: 16px;
+        padding: 12px 14px;
+        border: 1px dashed rgba(227, 85, 85, 0.42);
+        border-radius: 14px;
+        color: #a33c3c;
+        background: rgba(227, 85, 85, 0.055);
+        font-size: clamp(11px, 0.88vw, 14px);
+        line-height: 1.45;
+      }
+
+      [contenteditable="true"] {
+        border-radius: 5px;
+        outline: none;
+      }
+
+      [contenteditable="true"]:focus {
+        box-shadow: 0 0 0 3px rgba(109, 93, 252, 0.2);
+        background: rgba(109, 93, 252, 0.07);
+      }
+
+      .impact-table {
+        display: grid;
+        gap: 10px;
+      }
+
+      .impact-row {
+        display: grid;
+        grid-template-columns: 38px minmax(190px, 1.55fr) repeat(3, minmax(72px, 0.55fr));
+        gap: 10px;
+        align-items: center;
+        padding: 13px 16px;
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        background: rgba(255, 255, 255, 0.74);
+      }
+
+      .impact-row.header {
+        border-color: transparent;
+        color: var(--muted);
+        background: transparent;
+        font-size: clamp(10px, 0.8vw, 13px);
+        font-weight: 800;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .impact-row.winner {
+        border-color: rgba(109, 93, 252, 0.4);
+        background: linear-gradient(90deg, rgba(109, 93, 252, 0.11), rgba(18, 185, 200, 0.07));
+        box-shadow: 0 18px 50px rgba(109, 93, 252, 0.1);
+      }
+
+      .rank {
+        color: var(--muted);
+        font-weight: 900;
+      }
+
+      .candidate strong {
+        display: block;
+        font-size: clamp(13px, 1.12vw, 18px);
+      }
+
+      .candidate small {
+        color: var(--muted);
+        font-size: clamp(10px, 0.78vw, 13px);
+      }
+
+      .score {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        border-radius: 10px;
+        color: var(--navy);
+        background: #eef0f8;
+        font-size: clamp(11px, 0.88vw, 14px);
+        font-weight: 800;
+        text-align: center;
+      }
+
+      .winner .score {
+        color: #4939d5;
+        background: rgba(109, 93, 252, 0.12);
+      }
+
+      .workflow {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .step {
+        position: relative;
+        min-height: 132px;
+        padding: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.07);
+      }
+
+      .step:not(:last-child)::after {
+        content: "→";
+        position: absolute;
+        top: 50%;
+        right: -18px;
+        z-index: 2;
+        color: #9ef3f5;
+        font-size: 20px;
+        font-weight: 900;
+        transform: translateY(-50%);
+      }
+
+      .step-index {
+        display: inline-grid;
+        width: 30px;
+        height: 30px;
+        margin-bottom: 14px;
+        place-items: center;
+        border-radius: 9px;
+        color: var(--navy);
+        background: #9ef3f5;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .step strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: clamp(13px, 1.12vw, 18px);
+      }
+
+      .step span {
+        color: rgba(255, 255, 255, 0.62);
+        font-size: clamp(10px, 0.8vw, 13px);
+        line-height: 1.4;
+      }
+
+      .demo-cases {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .demo-case {
+        display: flex;
+        gap: 13px;
+        align-items: center;
+        padding: 14px 16px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        background: rgba(0, 0, 0, 0.14);
+      }
+
+      .demo-icon {
+        display: grid;
+        flex: 0 0 auto;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 12px;
+        color: var(--navy);
+        background: var(--lime);
+        font-weight: 900;
+      }
+
+      .demo-case.hard .demo-icon {
+        background: #ffc4b6;
+      }
+
+      .demo-case strong {
+        display: block;
+        margin-bottom: 3px;
+        font-size: clamp(12px, 1vw, 16px);
+      }
+
+      .demo-case span {
+        color: rgba(255, 255, 255, 0.62);
+        font-size: clamp(10px, 0.78vw, 13px);
+      }
+
+      .metric-layout {
+        display: grid;
+        grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.2fr);
+        gap: clamp(24px, 4vw, 70px);
+        align-items: stretch;
+      }
+
+      .big-metric {
+        display: grid;
+        min-height: 300px;
+        padding: clamp(24px, 3vw, 48px);
+        place-content: center;
+        border-radius: 32px;
+        color: white;
+        background:
+          radial-gradient(circle at 70% 20%, rgba(158, 243, 245, 0.28), transparent 26%),
+          linear-gradient(145deg, var(--navy), #392b91);
+        box-shadow: var(--shadow);
+        text-align: center;
+      }
+
+      .big-metric .number {
+        color: white;
+        font-size: clamp(62px, 8vw, 136px);
+      }
+
+      .big-metric p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: clamp(12px, 1vw, 16px);
+        line-height: 1.45;
+      }
+
+      .result-stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .result-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 16px;
+        align-items: center;
+        padding: 18px 20px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.76);
+      }
+
+      .result-row strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: clamp(13px, 1.12vw, 18px);
+      }
+
+      .result-row span {
+        color: var(--muted);
+        font-size: clamp(10px, 0.82vw, 14px);
+      }
+
+      .result-value {
+        color: var(--violet) !important;
+        font-size: clamp(22px, 2.3vw, 38px) !important;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+      }
+
+      .quote-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: clamp(18px, 2vw, 30px);
+      }
+
+      blockquote {
+        position: relative;
+        min-height: 230px;
+        margin: 0;
+        padding: clamp(28px, 3vw, 46px);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: 0 20px 55px rgba(17, 29, 69, 0.07);
+      }
+
+      blockquote::before {
+        content: "“";
+        position: absolute;
+        top: 12px;
+        left: 22px;
+        color: rgba(109, 93, 252, 0.2);
+        font-family: Georgia, serif;
+        font-size: 72px;
+        line-height: 1;
+      }
+
+      blockquote p {
+        position: relative;
+        margin: 26px 0 24px;
+        font-size: clamp(16px, 1.6vw, 27px);
+        font-weight: 700;
+        line-height: 1.35;
+        letter-spacing: -0.02em;
+      }
+
+      blockquote footer {
+        color: var(--muted);
+        font-size: clamp(11px, 0.86vw, 14px);
+        font-weight: 750;
+      }
+
+      .change-strip {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        margin-top: 18px;
+        padding: 15px 18px;
+        border-radius: 17px;
+        color: #314211;
+        background: rgba(201, 242, 112, 0.48);
+        font-size: clamp(12px, 1vw, 16px);
+      }
+
+      .week-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: clamp(14px, 1.8vw, 28px);
+        margin-top: 28px;
+      }
+
+      .week-card {
+        min-height: 230px;
+        padding: clamp(20px, 2.2vw, 34px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 25px;
+        background: rgba(255, 255, 255, 0.065);
+      }
+
+      .week-card .day {
+        display: inline-block;
+        margin-bottom: 28px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        color: var(--navy);
+        background: #9ef3f5;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .week-card:nth-child(2) .day {
+        background: #d7caff;
+      }
+
+      .week-card:nth-child(3) .day {
+        background: var(--lime);
+      }
+
+      .week-card h3 {
+        margin-bottom: 10px;
+        font-size: clamp(17px, 1.55vw, 25px);
+        letter-spacing: -0.025em;
+      }
+
+      .week-card p {
+        color: rgba(255, 255, 255, 0.64);
+        font-size: clamp(11px, 0.9vw, 15px);
+        line-height: 1.5;
+      }
+
+      .lesson {
+        margin-top: 20px;
+        padding-left: 16px;
+        border-left: 3px solid #9ef3f5;
+        color: rgba(255, 255, 255, 0.76);
+        font-size: clamp(13px, 1.05vw, 17px);
+      }
+
+      .footer {
+        color: var(--muted);
+        font-size: clamp(10px, 0.76vw, 13px);
+      }
+
+      .dark .footer {
+        color: rgba(255, 255, 255, 0.48);
+      }
+
+      .page-num {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 4px;
+        font-weight: 900;
+      }
+
+      .page-num b {
+        color: var(--ink);
+        font-size: 18px;
+      }
+
+      .dark .page-num b {
+        color: white;
+      }
+
+      .controls {
+        position: fixed;
+        right: 22px;
+        bottom: 20px;
+        z-index: 50;
+        display: flex;
+        gap: 8px;
+        padding: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        background: rgba(7, 12, 26, 0.72);
+        box-shadow: 0 14px 42px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(14px);
+        transition: opacity 200ms ease;
+      }
+
+      .controls button {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        place-items: center;
+        border: 0;
+        border-radius: 11px;
+        color: white;
+        background: rgba(255, 255, 255, 0.09);
+        cursor: pointer;
+      }
+
+      .controls button:hover {
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      .progress {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 60;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .progress > span {
+        display: block;
+        width: calc(100% / 6);
+        height: 100%;
+        background: linear-gradient(90deg, var(--cyan), var(--violet));
+        transition: width 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      .hint {
+        position: fixed;
+        left: 22px;
+        bottom: 18px;
+        z-index: 40;
+        padding: 9px 13px;
+        border-radius: 999px;
+        color: rgba(255, 255, 255, 0.72);
+        background: rgba(7, 12, 26, 0.62);
+        font-size: 11px;
+        backdrop-filter: blur(10px);
+        transition: opacity 500ms ease;
+      }
+
+      .hint.hide {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      @media (max-width: 900px) {
+        .slide {
+          overflow-y: auto;
+        }
+
+        .grid-2,
+        .metric-layout {
+          grid-template-columns: 1fr;
+          align-items: start;
+        }
+
+        .cards-3,
+        .week-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .workflow {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .step:not(:last-child)::after {
+          display: none;
+        }
+
+        .impact-row {
+          grid-template-columns: 28px minmax(145px, 1.4fr) repeat(3, minmax(58px, 0.5fr));
+          padding: 11px 12px;
+        }
+
+        .quote-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .controls {
+          right: 10px;
+          bottom: 10px;
+        }
+
+        .hint {
+          display: none;
+        }
+      }
+
+      @media (max-height: 720px) and (min-width: 901px) {
+        .slide {
+          padding-top: 28px;
+          padding-bottom: 26px;
+        }
+
+        .content {
+          padding-top: 18px;
+          padding-bottom: 12px;
+        }
+
+        h1,
+        h2 {
+          margin-bottom: 12px;
+        }
+
+        .lede {
+          margin-bottom: 20px;
+        }
+
+        .card {
+          padding: 16px;
+        }
+
+        .week-card {
+          min-height: 190px;
+        }
+      }
+
+      @media print {
+        html,
+        body {
+          width: auto;
+          height: auto;
+          overflow: visible;
+          background: white;
+        }
+
+        .deck {
+          height: auto;
+        }
+
+        .slide {
+          position: relative;
+          width: 100vw;
+          height: 56.25vw;
+          min-height: 0;
+          break-after: page;
+          visibility: visible;
+          opacity: 1;
+          transform: none;
+        }
+
+        .controls,
+        .hint,
+        .progress {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="deck" aria-live="polite">
+      <section class="slide active" data-title="User &amp; Job" aria-hidden="false">
+        <header class="topline">
+          <div class="brand"><span class="brand-mark"></span>Nexus AI</div>
+          <span class="timing">45 giây</span>
+        </header>
+        <div class="content grid-2">
+          <div>
+            <div class="eyebrow">01 — User &amp; Job</div>
+            <h1>
+              PM không thiếu tool.<br />
+              Họ thiếu <span class="accent">tín hiệu đúng lúc.</span>
+            </h1>
+            <div class="job-statement">
+              Khi điều phối một team trẻ, PM muốn hiểu năng lực, tri thức và
+              sức tải của từng người để giao đúng việc — trước khi deadline
+              biến thành khủng hoảng.
+            </div>
+            <div class="evidence-note">
+              <strong>!</strong>
+              <span contenteditable="true"
+                >Cần thay bằng bằng chứng pain thật: ví dụ “17/25 PM xác nhận…”
+                + link khảo sát/log.</span
+              >
+            </div>
+          </div>
+          <div class="cards-3">
+            <article class="card">
+              <span class="number">3</span>
+              <h3>điểm mù</h3>
+              <p>Năng lực thật, tri thức chung và dấu hiệu quá tải.</p>
+            </article>
+            <article class="card">
+              <span class="number">1</span>
+              <h3>người quyết định</h3>
+              <p>PM chịu trách nhiệm giao việc và gỡ blocker.</p>
+            </article>
+            <article class="card">
+              <span class="number">48h</span>
+              <h3>ngưỡng cảnh báo</h3>
+              <p>Task ở trạng thái Doing quá lâu được gắn Red Flag.</p>
+            </article>
+          </div>
+        </div>
+        <footer class="footer">
+          <span>Nguồn: Nexus AI README · dashboard analytics</span>
+          <span class="page-num"><b>01</b>/06</span>
+        </footer>
+      </section>
+
+      <section class="slide" data-title="Vì sao chọn tính năng này" aria-hidden="true">
+        <header class="topline">
+          <div class="brand"><span class="brand-mark"></span>Nexus AI</div>
+          <span class="timing">45 giây</span>
+        </header>
+        <div class="content">
+          <div class="eyebrow">02 — Quyết định sản phẩm</div>
+          <h2>
+            Chọn lát cắt nối được
+            <span class="accent">IQ + EQ.</span>
+          </h2>
+          <p class="lede">
+            So sánh 3 ứng viên theo tác động lên quyết định của PM, khả năng
+            demo và rủi ro khi AI trả lời sai.
+          </p>
+          <div class="impact-table" role="table" aria-label="Bảng so sánh tính năng">
+            <div class="impact-row header" role="row">
+              <span>#</span><span>Ứng viên</span><span>Impact</span><span>Demo</span><span>Cost of error</span>
+            </div>
+            <div class="impact-row winner" role="row">
+              <span class="rank">01</span>
+              <span class="candidate">
+                <strong>AI Planner + EQ Radar</strong>
+                <small>Đề xuất task, tải việc và cảnh báo rủi ro</small>
+              </span>
+              <span class="score">Cao</span>
+              <span class="score">Live</span>
+              <span class="score">PM duyệt</span>
+            </div>
+            <div class="impact-row" role="row">
+              <span class="rank">02</span>
+              <span class="candidate">
+                <strong>Knowledge Bot</strong>
+                <small>Hỏi đáp tài liệu kèm nguồn</small>
+              </span>
+              <span class="score">Cao</span>
+              <span class="score">Live</span>
+              <span class="score">Citation</span>
+            </div>
+            <div class="impact-row" role="row">
+              <span class="rank">03</span>
+              <span class="candidate">
+                <strong>Team Chat</strong>
+                <small>Giao tiếp trong project workspace</small>
+              </span>
+              <span class="score">TB</span>
+              <span class="score">Mock</span>
+              <span class="score">Thấp</span>
+            </div>
+          </div>
+          <div class="evidence-note">
+            <strong>!</strong>
+            <span contenteditable="true"
+              >Đổi nguồn này thành link bảng impact của nhóm trước khi demo.</span
+            >
+          </div>
+        </div>
+        <footer class="footer">
+          <span>Nguồn hiện tại: MVP scope trong README · product roadmap</span>
+          <span class="page-num"><b>02</b>/06</span>
+        </footer>
+      </section>
+
+      <section class="slide dark" data-title="Giải pháp &amp; Demo" aria-hidden="true">
+        <header class="topline">
+          <div class="brand"><span class="brand-mark"></span>Nexus AI</div>
+          <span class="timing">2 phút</span>
+        </header>
+        <div class="content">
+          <div class="eyebrow">03 — Giải pháp &amp; Demo live</div>
+          <h2>
+            Từ tài liệu rời rạc đến
+            <span class="accent">kế hoạch có căn cứ.</span>
+          </h2>
+          <p class="lede">
+            Nexus đọc context dự án + hồ sơ thành viên, đề xuất phương án chia
+            việc; PM luôn là người duyệt trước khi task vào Kanban.
+          </p>
+          <div class="workflow">
+            <div class="step">
+              <span class="step-index">01</span>
+              <strong>Nạp context</strong>
+              <span>Tài liệu dự án được chunk 500 / overlap 80.</span>
+            </div>
+            <div class="step">
+              <span class="step-index">02</span>
+              <strong>Hiểu team</strong>
+              <span>Skills, EQ và workload tạo thành hồ sơ làm việc.</span>
+            </div>
+            <div class="step">
+              <span class="step-index">03</span>
+              <strong>AI đề xuất</strong>
+              <span>Task, assignee, deadline và lý do gợi ý.</span>
+            </div>
+            <div class="step">
+              <span class="step-index">04</span>
+              <strong>PM kiểm soát</strong>
+              <span>Accept, chỉnh sửa hoặc bỏ qua trước khi lưu board.</span>
+            </div>
+          </div>
+          <div class="demo-cases">
+            <div class="demo-case">
+              <span class="demo-icon">✓</span>
+              <div>
+                <strong>Case chuẩn</strong>
+                <span>Tạo task từ project brief và ghép đúng người.</span>
+              </div>
+            </div>
+            <div class="demo-case hard">
+              <span class="demo-icon">!</span>
+              <div>
+                <strong>Case khó</strong>
+                <span>AI/API lỗi → fallback generator, không làm gián đoạn demo.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer class="footer">
+          <span>Automation: augment · PM giữ quyền quyết định cuối</span>
+          <span class="page-num"><b>03</b>/06</span>
+        </footer>
+      </section>
+
+      <section class="slide" data-title="Kết quả đo" aria-hidden="true">
+        <header class="topline">
+          <div class="brand"><span class="brand-mark"></span>Nexus AI</div>
+          <span class="timing">45 giây</span>
+        </header>
+        <div class="content">
+          <div class="eyebrow">04 — Kết quả đo</div>
+          <h2>
+            Có tín hiệu kỹ thuật.
+            <span class="accent">Chưa đủ để kết luận sản phẩm.</span>
+          </h2>
+          <div class="metric-layout">
+            <article class="big-metric">
+              <span class="number">6/6</span>
+              <p>unit test analytics pass<br />theo review hiện có trong repo</p>
+            </article>
+            <div class="result-stack">
+              <div class="result-row">
+                <div>
+                  <strong>Quality bar đã chốt</strong>
+                  <span>Cần lấy nguyên văn từ spec.md lúc 23:59 ngày 1</span>
+                </div>
+                <span class="result-value" contenteditable="true">≥ __%</span>
+              </div>
+              <div class="result-row">
+                <div>
+                  <strong>Golden set hiện tại</strong>
+                  <span>Điền số case pass sau khi chạy trọn bộ</span>
+                </div>
+                <span class="result-value" contenteditable="true">__/20</span>
+              </div>
+              <div class="result-row">
+                <div>
+                  <strong>Failure đáng kể nhất</strong>
+                  <span contenteditable="true"
+                    >[Điền 1 case fail + nguyên nhân, không chỉ nêu số đẹp]</span
+                  >
+                </div>
+                <span class="result-value">01</span>
+              </div>
+              <div class="evidence-note">
+                <strong>!</strong>
+                <span
+                  >Repo chưa có thư mục eval/spec hoàn chỉnh; slide cố ý không
+                  bịa số đo sản phẩm.</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer class="footer">
+          <span>Nguồn: docs/feature-review-feedback.md · cần bổ sung eval/</span>
+          <span class="page-num"><b>04</b>/06</span>
+        </footer>
+      </section>
+
+      <section class="slide" data-title="User thật nói gì" aria-hidden="true">
+        <header class="topline">
+          <div class="brand"><span class="brand-mark"></span>Nexus AI</div>
+          <span class="timing">45 giây</span>
+        </header>
+        <div class="content">
+          <div class="eyebrow">05 — User thật nói gì</div>
+          <h2>
+            Feedback phải làm sản phẩm
+            <span class="accent">thay đổi.</span>
+          </h2>
+          <div class="quote-grid">
+            <blockquote>
+              <p contenteditable="true">
+                [Dán quote nguyên văn của PM sau khi họ tự thực hiện task]
+              </p>
+              <footer contenteditable="true">— Tên · vai trò · willing user?</footer>
+            </blockquote>
+            <blockquote>
+              <p contenteditable="true">
+                [Dán quote nguyên văn về điểm khó hiểu hoặc rủi ro]
+              </p>
+              <footer contenteditable="true">— Tên · vai trò · willing user?</footer>
+            </blockquote>
+          </div>
+          <div class="change-strip">
+            <strong>Thay đổi đã làm →</strong>
+            <span contenteditable="true"
+              >[Ví dụ: thêm lý do ghép task và nút chỉnh sửa trước khi lưu]</span
+            >
+          </div>
+          <div class="evidence-note">
+            <strong>!</strong>
+            <span
+              >Hiện chưa có validation log trong repo. Cần tối thiểu 5 mẩu
+              feedback có tên trước CP6.</span
+            >
+          </div>
+        </div>
+        <footer class="footer">
+          <span>Nguồn cần bổ sung: validation/feedback-log</span>
+          <span class="page-num"><b>05</b>/06</span>
+        </footer>
+      </section>
+
+      <section class="slide dark" data-title="Nếu có thêm 1 tuần" aria-hidden="true">
+        <header class="topline">
+          <div class="brand"><span class="brand-mark"></span>Nexus AI</div>
+          <span class="timing">30 giây</span>
+        </header>
+        <div class="content">
+          <div class="eyebrow">06 — Nếu có thêm 1 tuần</div>
+          <h2>
+            Ít roadmap hơn.<br />
+            <span class="accent">Nhiều bằng chứng hơn.</span>
+          </h2>
+          <div class="week-grid">
+            <article class="week-card">
+              <span class="day">Ưu tiên 01</span>
+              <h3>Chạy ≥20 case</h3>
+              <p>
+                Golden set phủ case thường, case hiếm và 4 lớp chỗ khó; lưu đầy
+                đủ cả pass lẫn fail.
+              </p>
+            </article>
+            <article class="week-card">
+              <span class="day">Ưu tiên 02</span>
+              <h3>Test với ≥5 user</h3>
+              <p>
+                Quan sát họ tự dùng planner; sửa 1–2 friction lặp lại nhiều
+                nhất thay vì thêm feature.
+              </p>
+            </article>
+            <article class="week-card">
+              <span class="day">Ưu tiên 03</span>
+              <h3>Đóng vòng kiểm soát</h3>
+              <p>
+                Log lý do AI gợi ý, hành động PM chỉnh sửa và lịch sử Red Flag
+                để hệ thống có thể kiểm chứng.
+              </p>
+            </article>
+          </div>
+          <p class="lesson">
+            <strong>Bài học lớn nhất:</strong> AI hữu ích không phải khi quyết
+            định thay PM, mà khi giúp PM nhìn thấy điều họ sắp bỏ lỡ.
+          </p>
+        </div>
+        <footer class="footer">
+          <span>Nexus AI · IQ để hiểu việc, EQ để hiểu người</span>
+          <span class="page-num"><b>06</b>/06</span>
+        </footer>
+      </section>
+    </main>
+
+    <div class="hint" id="hint">← → chuyển slide · F toàn màn hình · P in PDF</div>
+    <nav class="controls" aria-label="Điều khiển slide">
+      <button id="prev" type="button" aria-label="Slide trước">←</button>
+      <button id="next" type="button" aria-label="Slide sau">→</button>
+      <button id="fullscreen" type="button" aria-label="Toàn màn hình">⛶</button>
+    </nav>
+    <div class="progress" aria-hidden="true"><span id="progress"></span></div>
+
+    <script>
+      const slides = [...document.querySelectorAll(".slide")];
+      const progress = document.getElementById("progress");
+      const hint = document.getElementById("hint");
+      let current = 0;
+
+      const clamp = (value) => Math.max(0, Math.min(slides.length - 1, value));
+
+      function showSlide(nextIndex, updateHash = true) {
+        const target = clamp(nextIndex);
+        slides.forEach((slide, index) => {
+          slide.classList.toggle("active", index === target);
+          slide.classList.toggle("exit-left", index < target);
+          slide.setAttribute("aria-hidden", index === target ? "false" : "true");
+        });
+        current = target;
+        progress.style.width = `${((current + 1) / slides.length) * 100}%`;
+        document.title = `${String(current + 1).padStart(2, "0")} · ${slides[current].dataset.title} — Nexus AI`;
+        if (updateHash) history.replaceState(null, "", `#${current + 1}`);
+      }
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.();
+        } else {
+          document.exitFullscreen?.();
+        }
+      }
+
+      document.getElementById("prev").addEventListener("click", () => showSlide(current - 1));
+      document.getElementById("next").addEventListener("click", () => showSlide(current + 1));
+      document.getElementById("fullscreen").addEventListener("click", toggleFullscreen);
+
+      document.addEventListener("keydown", (event) => {
+        const editing = document.activeElement?.isContentEditable;
+        if (editing && !["Escape"].includes(event.key)) return;
+
+        if (["ArrowRight", "PageDown", " ", "Enter"].includes(event.key)) {
+          event.preventDefault();
+          showSlide(current + 1);
+        }
+        if (["ArrowLeft", "PageUp", "Backspace"].includes(event.key)) {
+          event.preventDefault();
+          showSlide(current - 1);
+        }
+        if (event.key.toLowerCase() === "f") toggleFullscreen();
+        if (event.key.toLowerCase() === "p") window.print();
+        if (event.key === "Home") showSlide(0);
+        if (event.key === "End") showSlide(slides.length - 1);
+      });
+
+      let touchStartX = null;
+      document.addEventListener(
+        "touchstart",
+        (event) => {
+          touchStartX = event.changedTouches[0].screenX;
+        },
+        { passive: true },
+      );
+      document.addEventListener(
+        "touchend",
+        (event) => {
+          if (touchStartX === null) return;
+          const delta = event.changedTouches[0].screenX - touchStartX;
+          if (Math.abs(delta) > 55) showSlide(current + (delta < 0 ? 1 : -1));
+          touchStartX = null;
+        },
+        { passive: true },
+      );
+
+      window.addEventListener("hashchange", () => {
+        const fromHash = Number(location.hash.slice(1)) - 1;
+        if (Number.isFinite(fromHash)) showSlide(fromHash, false);
+      });
+
+      setTimeout(() => hint.classList.add("hide"), 6500);
+      const initial = Number(location.hash.slice(1)) - 1;
+      showSlide(Number.isFinite(initial) ? initial : 0, false);
+    </script>
+  </body>
+</html>

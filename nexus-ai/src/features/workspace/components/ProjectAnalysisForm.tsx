@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { BrainCircuit } from "lucide-react";
 
 import { generateProjectRecommendations } from "@/features/workspace/actions";
@@ -15,6 +16,11 @@ export function ProjectAnalysisForm({
   disabled: boolean;
 }) {
   const [state, action, pending] = useActionState(generateProjectRecommendations, initialState);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.message) router.refresh();
+  }, [router, state.message]);
 
   return (
     <form action={action} className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
