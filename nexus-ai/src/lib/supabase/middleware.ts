@@ -3,6 +3,15 @@ import { type NextRequest, NextResponse } from "next/server";
 
 const privateRoutes = ["/project", "/dashboard", "/pm-dashboard", "/onboarding", "/profile", "/join", "/api/projects", "/knowledge"];
 
+function createRedirectUrl(request: NextRequest, pathname: string) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  // Next.js client navigations can include internal parameters such as `_rsc`.
+  // Keeping them in the redirect URL can leave the router on the old screen.
+  url.search = "";
+  return url;
+}
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -50,8 +59,7 @@ export async function updateSession(request: NextRequest) {
       .maybeSingle();
 
     if (!profile?.onboarding_completed) {
-      const onboardingUrl = request.nextUrl.clone();
-      onboardingUrl.pathname = "/onboarding";
+      const onboardingUrl = createRedirectUrl(request, "/onboarding");
       onboardingUrl.searchParams.set("next", pathname);
       return NextResponse.redirect(onboardingUrl);
     }
@@ -62,16 +70,13 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
+    const loginUrl = createRedirectUrl(request, "/login");
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   if (isAuthRoute && user) {
-    const homeUrl = request.nextUrl.clone();
-    homeUrl.pathname = "/";
-    homeUrl.search = "";
+    const homeUrl = createRedirectUrl(request, "/");
     return NextResponse.redirect(homeUrl);
   }
 
