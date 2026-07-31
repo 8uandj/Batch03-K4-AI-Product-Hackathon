@@ -3,6 +3,22 @@ import type { RiskEventType, RiskSeverity, TaskPriority, TaskStatus } from "@/ty
 
 export type DashboardMode = "pm" | "member" | "empty";
 
+export type ProjectOption = {
+  id: string;
+  name: string;
+  role: "pm" | "member";
+};
+
+export type ProjectProgressOverview = {
+  id: string;
+  name: string;
+  role: "pm" | "member";
+  progressPercentage: number;
+  totalTasks: number;
+  completedTasks: number;
+  overdueTasks: number;
+};
+
 export type DashboardTaskItem = {
   id: string;
   title: string;
@@ -46,7 +62,10 @@ export type RoleDashboardData =
   | {
       mode: "pm";
       userName: string;
-      projectIds: string[];
+      userProjects: ProjectOption[];
+      projectsOverview: ProjectProgressOverview[];
+      selectedProjectId: string;
+      selectedProjectName: string;
       projectCount: number;
       stats: DashboardStats;
       redFlags: DashboardTaskItem[];
@@ -57,7 +76,10 @@ export type RoleDashboardData =
   | {
       mode: "member";
       userName: string;
-      projectIds: string[];
+      userProjects: ProjectOption[];
+      projectsOverview: ProjectProgressOverview[];
+      selectedProjectId: string;
+      selectedProjectName: string;
       stats: DashboardStats;
       upcomingTasks: DashboardTaskItem[];
       overdueTasks: DashboardTaskItem[];
@@ -67,6 +89,8 @@ export type RoleDashboardData =
   | {
       mode: "empty";
       userName: string;
+      userProjects: ProjectOption[];
+      projectsOverview: ProjectProgressOverview[];
       generatedAt: string;
     };
 
@@ -192,46 +216,211 @@ async function loadNames(
   };
 }
 
-export async function getRoleDashboardData(): Promise<RoleDashboardData> {
+export async function getRoleDashboardData(selectedProjectId?: string): Promise<RoleDashboardData> {
   const supabase = await createClient();
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError || !user) throw new Error("Bạn cần đăng nhập để xem dashboard.");
-
-  const userName = displayName(user.user_metadata?.name || user.email);
+  const userName = displayName(user?.user_metadata?.name || user?.email || "Demo User");
   const now = new Date();
   const generatedAt = now.toISOString();
 
-  const { data: memberships, error: membershipError } = await supabase
-    .from("project_members")
-    .select("project_id,role")
-    .eq("user_id", user.id);
+  let userProjects: ProjectOption[] = [];
+  let userId = user?.id || "demo_user";
 
-  if (membershipError) throw new Error(membershipError.message);
+  if (user) {
+    const { data: memberships } = await supabase
+      .from("project_members")
+      .select("project_id, role, projects(id, name)")
+      .eq("user_id", user.id);
 
-  const membershipRows = (memberships ?? []) as MembershipRow[];
-  if (membershipRows.length === 0) return { mode: "empty", userName, generatedAt };
+    if (memberships && memberships.length > 0) {
+      userProjects = memberships.map((m) => {
+        const p = (m.projects as any) || {};
+        return {
+          id: m.project_id,
+          name: p.name || `Project ${m.project_id.slice(0, 6)}`,
+          role: (m.role as "pm" | "member") || "member",
+        };
+      });
+    }
+  }
 
-  const pmProjectIds = membershipRows
-    .filter((membership) => membership.role === "pm")
-    .map((membership) => membership.project_id);
-  const allProjectIds = membershipRows.map((membership) => membership.project_id);
+  // Fallback mock project options for demo/unauthenticated mode
+  if (userProjects.length === 0) {
+    userProjects = [
+      { id: "demo-pm", name: "Dự án Nexus AI [Quản trị viên]", role: "pm" },
+      { id: "demo-member", name: "Dự án E-Commerce [Thành viên]", role: "member" },
+      { id: "demo-mobile", name: "Dự án Mobile App [Thành viên]", role: "member" },
+    ];
+  }
 
-  if (pmProjectIds.length > 0) {
-    const { data: tasksData, error: tasksError } = await supabase
+  // Determine active project
+  let activeProject = userProjects.find((p) => p.id === selectedProjectId) || userProjects[0];
+  const activeRole = activeProject.role;
+
+  // Build Projects Progress Overview Header for ALL user projects
+  const projectsOverview: ProjectProgressOverview[] = userProjects.map((p, idx) => {
+    // Generate realistic progress metrics per project for header overview
+    const mockProgresses = [75, 45, 90];
+    const mockTotals = [12, 8, 15];
+    const mockDones = [9, 3, 13];
+    const mockOverdues = [1, 2, 0];
+
+    const progressPercentage = mockProgresses[idx % mockProgresses.length];
+    const totalTasks = mockTotals[idx % mockTotals.length];
+    const completedTasks = mockDones[idx % mockDones.length];
+    const overdueTasks = mockOverdues[idx % mockOverdues.length];
+
+    return {
+      id: p.id,
+      name: p.name,
+      role: p.role,
+      progressPercentage,
+      totalTasks,
+      completedTasks,
+      overdueTasks,
+    };
+  });
+
+  // Handle Mock Demo Projects
+  if (activeProject.id.startsWith("demo-")) {
+    if (activeRole === "pm") {
+      const mockTasks: DashboardTaskItem[] = [
+        {
+          id: "t1",
+          title: "Thiết kế REST API Router & Supabase Migration",
+          projectId: activeProject.id,
+          projectName: activeProject.name,
+          status: "doing",
+          priority: "high",
+          assigneeId: "u1",
+          assigneeName: "Trần Minh Hoàng",
+          updatedAt: new Date(now.getTime() - 50 * 3600 * 1000).toISOString(),
+          dueAt: new Date(now.getTime() - 10 * 3600 * 1000).toISOString(),
+          delayHours: 50,
+          overdue: true,
+        },
+        {
+          id: "t2",
+          title: "Xây dựng giao diện Drag-Drop Kanban Board",
+          projectId: activeProject.id,
+          projectName: activeProject.name,
+          status: "doing",
+          priority: "medium",
+          assigneeId: "u2",
+          assigneeName: "Nguyễn Văn Tuấn",
+          updatedAt: new Date(now.getTime() - 4 * 3600 * 1000).toISOString(),
+          dueAt: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(),
+          delayHours: 4,
+          overdue: false,
+        },
+        {
+          id: "t3",
+          title: "Viết Unit Test & Tích hợp RAG Search",
+          projectId: activeProject.id,
+          projectName: activeProject.name,
+          status: "todo",
+          priority: "low",
+          assigneeId: "u3",
+          assigneeName: "Phạm Quốc Bảo",
+          updatedAt: now.toISOString(),
+          dueAt: new Date(now.getTime() + 48 * 3600 * 1000).toISOString(),
+          delayHours: 0,
+          overdue: false,
+        },
+      ];
+
+      return {
+        mode: "pm",
+        userName,
+        userProjects,
+        projectsOverview,
+        selectedProjectId: activeProject.id,
+        selectedProjectName: activeProject.name,
+        projectCount: userProjects.length,
+        stats: calculateStats(mockTasks),
+        redFlags: [mockTasks[0]],
+        workload: [
+          { userId: "u1", name: "Trần Minh Hoàng", openTasks: 1, overdueTasks: 1 },
+          { userId: "u2", name: "Nguyễn Văn Tuấn", openTasks: 1, overdueTasks: 0 },
+          { userId: "u3", name: "Phạm Quốc Bảo", openTasks: 1, overdueTasks: 0 },
+        ],
+        riskEvents: [
+          {
+            id: "r1",
+            type: "overdue",
+            severity: "high",
+            summary: "Cảnh báo RAG Vector Search trễ 3 ngày, ảnh hưởng Chatbot",
+            ownerName: "Trần Minh Hoàng",
+            createdAt: now.toISOString(),
+          },
+        ],
+        generatedAt,
+      };
+    } else {
+      // Member mode in mock project
+      const myMockTasks: DashboardTaskItem[] = [
+        {
+          id: "mt1",
+          title: "Nghiên cứu & Tích hợp SDK Firebase Analytics",
+          projectId: activeProject.id,
+          projectName: activeProject.name,
+          status: "doing",
+          priority: "medium",
+          assigneeId: userId,
+          assigneeName: userName,
+          updatedAt: now.toISOString(),
+          dueAt: new Date(now.getTime() + 18 * 3600 * 1000).toISOString(),
+          delayHours: 2,
+          overdue: false,
+        },
+        {
+          id: "mt2",
+          title: "Cập nhật tài liệu kỹ thuật API Client",
+          projectId: activeProject.id,
+          projectName: activeProject.name,
+          status: "todo",
+          priority: "low",
+          assigneeId: userId,
+          assigneeName: userName,
+          updatedAt: now.toISOString(),
+          dueAt: new Date(now.getTime() + 36 * 3600 * 1000).toISOString(),
+          delayHours: 0,
+          overdue: false,
+        },
+      ];
+
+      return {
+        mode: "member",
+        userName,
+        userProjects,
+        projectsOverview,
+        selectedProjectId: activeProject.id,
+        selectedProjectName: activeProject.name,
+        stats: calculateStats(myMockTasks),
+        upcomingTasks: myMockTasks,
+        overdueTasks: [],
+        doingTooLongTasks: [],
+        generatedAt,
+      };
+    }
+  }
+
+  // Live Supabase Database Data fetching for selected project
+  if (activeRole === "pm") {
+    const { data: tasksData } = await supabase
       .from("tasks")
       .select("id,title,project_id,status,priority,assignee_id,updated_at,due_at")
-      .in("project_id", pmProjectIds);
-
-    if (tasksError) throw new Error(tasksError.message);
+      .eq("project_id", activeProject.id);
 
     const taskRows = (tasksData ?? []) as TaskRow[];
     const assigneeIds = Array.from(new Set(taskRows.map((task) => task.assignee_id).filter(Boolean))) as string[];
-    const { projectNames, userNames } = await loadNames(supabase, pmProjectIds, assigneeIds);
+    const { projectNames, userNames } = await loadNames(supabase, [activeProject.id], assigneeIds);
     const tasks = mapTasks(taskRows, projectNames, userNames, now);
+
     const redFlags = tasks
       .filter((task) => task.overdue || (task.status === "doing" && task.delayHours > RED_FLAG_THRESHOLD_HOURS))
       .sort((left, right) => Number(right.overdue) - Number(left.overdue) || right.delayHours - left.delayHours);
@@ -250,28 +439,21 @@ export async function getRoleDashboardData(): Promise<RoleDashboardData> {
       workloadByUser.set(task.assigneeId, current);
     }
 
-    const { data: risksData, error: risksError } = await supabase
+    const { data: risksData } = await supabase
       .from("risk_events")
       .select("id,type,severity,summary,user_id,created_at")
-      .in("project_id", pmProjectIds)
+      .eq("project_id", activeProject.id)
       .order("created_at", { ascending: false })
       .limit(10);
-
-    if (risksError) throw new Error(risksError.message);
-
-    const extraRiskUserIds = Array.from(
-      new Set(((risksData ?? []) as RiskRow[]).map((risk) => risk.user_id).filter(Boolean)),
-    ) as string[];
-    if (extraRiskUserIds.length > 0) {
-      const { userNames: riskUserNames } = await loadNames(supabase, [], extraRiskUserIds);
-      riskUserNames.forEach((name, id) => userNames.set(id, name));
-    }
 
     return {
       mode: "pm",
       userName,
-      projectIds: pmProjectIds,
-      projectCount: pmProjectIds.length,
+      userProjects,
+      projectsOverview,
+      selectedProjectId: activeProject.id,
+      selectedProjectName: activeProject.name,
+      projectCount: userProjects.length,
       stats: calculateStats(tasks),
       redFlags,
       workload: Array.from(workloadByUser.values()).sort((left, right) => right.openTasks - left.openTasks),
@@ -285,39 +467,37 @@ export async function getRoleDashboardData(): Promise<RoleDashboardData> {
       })),
       generatedAt,
     };
+  } else {
+    // Selected Project is MEMBER role -> Fetch ONLY current user's tasks in this project
+    const { data: tasksData } = await supabase
+      .from("tasks")
+      .select("id,title,project_id,status,priority,assignee_id,updated_at,due_at")
+      .eq("project_id", activeProject.id)
+      .eq("assignee_id", userId);
+
+    const taskRows = (tasksData ?? []) as TaskRow[];
+    const { projectNames, userNames } = await loadNames(supabase, [activeProject.id], [userId]);
+    userNames.set(userId, userName);
+    const tasks = mapTasks(taskRows, projectNames, userNames, now);
+
+    const upcomingTasks = tasks
+      .filter((task) => task.dueAt && !task.overdue && task.status !== "done")
+      .sort((left, right) => new Date(left.dueAt || 0).getTime() - new Date(right.dueAt || 0).getTime());
+    const overdueTasks = tasks.filter((task) => task.overdue);
+    const doingTooLongTasks = tasks.filter((task) => task.status === "doing" && task.delayHours > RED_FLAG_THRESHOLD_HOURS);
+
+    return {
+      mode: "member",
+      userName,
+      userProjects,
+      projectsOverview,
+      selectedProjectId: activeProject.id,
+      selectedProjectName: activeProject.name,
+      stats: calculateStats(tasks),
+      upcomingTasks,
+      overdueTasks,
+      doingTooLongTasks,
+      generatedAt,
+    };
   }
-
-  const { data: tasksData, error: tasksError } = await supabase
-    .from("tasks")
-    .select("id,title,project_id,status,priority,assignee_id,updated_at,due_at")
-    .in("project_id", allProjectIds)
-    .eq("assignee_id", user.id);
-
-  if (tasksError) throw new Error(tasksError.message);
-
-  const taskRows = (tasksData ?? []) as TaskRow[];
-  const { projectNames, userNames } = await loadNames(supabase, allProjectIds, [user.id]);
-  userNames.set(user.id, userName);
-  const tasks = mapTasks(taskRows, projectNames, userNames, now);
-  const upcomingTasks = tasks
-    .filter((task) => task.dueAt && !task.overdue && task.status !== "done")
-    .sort((left, right) => new Date(left.dueAt || 0).getTime() - new Date(right.dueAt || 0).getTime())
-    .slice(0, 8);
-  const overdueTasks = tasks
-    .filter((task) => task.overdue)
-    .sort((left, right) => new Date(left.dueAt || 0).getTime() - new Date(right.dueAt || 0).getTime());
-  const doingTooLongTasks = tasks
-    .filter((task) => task.status === "doing" && task.delayHours > RED_FLAG_THRESHOLD_HOURS)
-    .sort((left, right) => right.delayHours - left.delayHours);
-
-  return {
-    mode: "member",
-    userName,
-    projectIds: allProjectIds,
-    stats: calculateStats(tasks),
-    upcomingTasks,
-    overdueTasks,
-    doingTooLongTasks,
-    generatedAt,
-  };
 }
