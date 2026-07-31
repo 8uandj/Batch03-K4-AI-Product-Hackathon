@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, FolderKanban, Loader2, MessageSquare, Send, UserCheck, UserRound } from "lucide-react";
+import { Bot, FolderKanban, Loader2, MessageSquare, Send, ShieldCheck, UserCheck, UserRound } from "lucide-react";
 
 import type { TeamChatMessageItem } from "@/app/api/projects/[id]/team-chat/route";
 
@@ -62,7 +62,9 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
   useEffect(() => {
     setIsLoading(true);
     fetchMessages(activeProjectId);
-    const interval = setInterval(() => fetchMessages(activeProjectId), 3000);
+
+    // Fast 2-second real-time polling to instantly sync messages between project members
+    const interval = setInterval(() => fetchMessages(activeProjectId), 2000);
     return () => clearInterval(interval);
   }, [activeProjectId]);
 
@@ -92,7 +94,7 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
       if (data.message) {
         setMessages((prev) => [...prev, data.message]);
       }
-      setTimeout(() => fetchMessages(activeProjectId), 800);
+      setTimeout(() => fetchMessages(activeProjectId), 500);
     } catch (err) {
       console.error("Lỗi gửi tin nhắn:", err);
     } finally {
@@ -114,7 +116,8 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
       const memberRemindMsg: TeamChatMessageItem = {
         id: `msg_remind_${Date.now()}`,
         senderId: null,
-        senderName: "Nexus AI Remind Bot (Mỗi 2h)",
+        senderName: "Nexus AI Remind Bot",
+        senderRole: "ai",
         senderType: "assistant",
         content:
           "💬 [AI Remind - Cập nhật 2h/lần]: Chào Nguyễn Văn Tuấn (Frontend Lead), task 'Xây dựng giao diện Kanban Board' của bạn đang trễ 4 tiếng so với mốc 3h quy định. Bạn có cần hỗ trợ gỡ blocker kỹ thuật hay nhờ đồng đội hỗ trợ không?",
@@ -125,6 +128,7 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
         id: `msg_alert_${Date.now()}`,
         senderId: null,
         senderName: "Nexus AI Leader Alert",
+        senderRole: "ai",
         senderType: "assistant",
         content:
           "🚨 [AI CẢNH BÁO LEADER]: Thành viên Trần Minh Hoàng (Backend Lead) đã trễ task 'Cấu hình RAG Vector Search' 3 ngày (> 2 ngày). AI đề xuất 3 giải pháp cho Leader:\n1. Tách sub-task giao bớt cho thành viên khác;\n2. Họp khẩn 1-1 gỡ blocker;\n3. Dời deadline sang Sprint tiếp theo.",
@@ -181,11 +185,11 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
           <div className="flex items-center gap-2">
             <MessageSquare aria-hidden="true" className="text-violet-600" size={20} />
             <h1 className="font-black text-slate-950 text-base">
-              Kênh Chat Nội Bộ - {currentProject.name}
+              Kênh Chat Nội Bộ Live - {currentProject.name}
             </h1>
           </div>
           <p className="mt-0.5 text-xs text-slate-500">
-            Không gian thảo luận nhóm trực tiếp. Tin nhắn tự động đồng bộ thời gian thực cho toàn bộ thành viên.
+            Không gian trao đổi trực tuyến giữa các thành viên. Hiển thị vai trò (PM / Member) và tự động đồng bộ thời gian thực.
           </p>
         </div>
 
@@ -200,7 +204,7 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
           </button>
 
           <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200 flex items-center gap-1.5 shrink-0">
-            <span className="size-2 rounded-full bg-emerald-500 animate-pulse" /> Live Team Room
+            <span className="size-2 rounded-full bg-emerald-500 animate-pulse" /> Live Supabase Sync (2s)
           </div>
         </div>
       </header>
@@ -250,14 +254,37 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
                         : "bg-white border-slate-200 text-slate-800"
                   }`}
                 >
+                  {/* Sender Header info with Role Badge */}
                   <div
-                    className={`flex items-center gap-2 text-xs ${
+                    className={`flex items-center gap-2 text-xs mb-1 ${
                       isMe ? "text-indigo-100 justify-end" : "text-slate-500"
                     }`}
                   >
+                    {/* Role Badge (PM / Member / AI) */}
+                    <span
+                      className={`rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${
+                        message.senderRole === "pm"
+                          ? isMe
+                            ? "bg-rose-500/30 text-rose-200 border border-rose-300/40"
+                            : "bg-rose-100 text-rose-800 border border-rose-200"
+                          : message.senderRole === "ai"
+                            ? "bg-violet-200 text-violet-900 border border-violet-300"
+                            : isMe
+                              ? "bg-cyan-500/30 text-cyan-200 border border-cyan-300/40"
+                              : "bg-cyan-100 text-cyan-800 border border-cyan-200"
+                      }`}
+                    >
+                      {message.senderRole === "pm"
+                        ? "👑 PM"
+                        : message.senderRole === "ai"
+                          ? "🤖 AI Bot"
+                          : "👤 Member"}
+                    </span>
+
                     <span className="font-bold">{message.senderName}</span>
                     <span className="text-[10px] opacity-75">{message.createdAt}</span>
                   </div>
+
                   <p className="mt-1 text-xs leading-relaxed whitespace-pre-line">{message.content}</p>
                 </div>
               </article>
@@ -273,7 +300,7 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder={`Nhập tin nhắn gửi tới thành viên phòng ${currentProject.name}...`}
+            placeholder={`Nhập tin nhắn gửi tới các thành viên phòng ${currentProject.name}...`}
             className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-900 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-100"
           />
           <button
@@ -286,7 +313,7 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
           </button>
         </form>
         <p className="text-[11px] text-slate-400 text-center font-medium">
-          💡 Đang gửi tin nhắn trong phòng chat: <strong>{currentProject.name}</strong>.
+          💡 Đang trò chuyện trực tuyến trong phòng: <strong>{currentProject.name}</strong>. Tin nhắn tự động đồng bộ mỗi 2 giây.
         </p>
       </div>
     </section>
