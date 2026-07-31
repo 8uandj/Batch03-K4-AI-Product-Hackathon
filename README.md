@@ -1,3 +1,55 @@
+# Hồ sơ nộp bài — Nexus AI
+
+Nexus AI là trợ lý lập kế hoạch có kiểm soát cho PM của team dự án ngắn hạn. Lát cắt nộp bài tập trung vào Auto-Tasking: từ project brief hoặc đoạn trao đổi, hệ thống quyết định đề xuất task, hỏi lại khi thiếu dữ kiện hoặc từ chối yêu cầu vượt quyền; PM luôn sửa và duyệt trước khi task vào Kanban.
+
+## Thành viên và phân công
+
+| Mã HV | Thành viên | Phần phụ trách |
+|---|---|---|
+| 2A202601822 | Sẻ Thế Hưng | Onboarding và dữ liệu đầu vào |
+| 2A202601968 | Nguyễn Văn Đạt | Knowledge Hub/RAG và kiểm tra grounding |
+| 2A202602021 | Nguyễn Đặng Thành Vinh | Auto-Tasking, Kanban, prompt và eval |
+| 2A202601104 | Đặng Hữu Khanh | EQ Radar, analytics và safety cases |
+| 2A202601908 | Hoàng Duy Hưng | PM, spec, evidence, hạ tầng và tích hợp |
+
+> Tên, mã học viên và vai trò trong bảng được đồng bộ theo 5 reflection cá nhân trong thư mục `reflection/`.
+
+Phân công chi tiết theo deliverable và phạm vi từng người nằm tại [`spec.md`](spec.md#8-phân-công--kế-hoạch).
+
+## Danh mục artifact nộp bài
+
+| Yêu cầu | Artifact | Trạng thái |
+|---|---|---|
+| README có thành viên, mã HV, phân công | `README.md` | Hoàn tất |
+| AI Spec | `spec.md` | Có; các mục cần dữ liệu thật được đánh dấu `TODO bắt buộc` |
+| Slide demo 6 trang | `demo-slides.pdf` | Có; trang 5 chờ quote validation thật |
+| Prototype | `nexus-ai/` | Có; hiện chưa đổi tên thành `codebase/` theo yêu cầu của chủ repo |
+| Golden set và kết quả chạy | `eval/` | Có 24 case đúng cơ cấu; Run 01 trên bộ v1: 13/20 (65%); Run 02 chờ xác nhận gửi API |
+| Evidence | `evidence/` | Có 23 phản hồi ẩn danh, log đầy đủ, phương pháp và số liệu tổng hợp |
+| Validation | `validation/` | Có protocol và feedback log; **chờ ≥5 người thật** |
+| Reflection cá nhân | `reflection/` | Hoàn tất 5 file cá nhân, đúng tên và mã học viên |
+| Backup demo | `demo-backup/README.md` | Có checklist; **chờ ảnh/video của lượt chạy thật** |
+
+## Chạy prototype và eval
+
+Xem hướng dẫn môi trường, Supabase và cách chạy tại [`nexus-ai/README.md`](nexus-ai/README.md). Chạy eval từ thư mục gốc:
+
+```bash
+node --env-file=nexus-ai/.env eval/run-eval.mjs --run-id run-02
+```
+
+Không commit `.env`, `.env.local`, API key, dữ liệu cá nhân hoặc data pack của ban tổ chức.
+
+## Việc bắt buộc còn lại trước CP6
+
+1. Điền tên nhóm và zone trong `spec.md`.
+2. Xác nhận 23 người khảo sát đều ngoài nhóm; form không thu danh tính nên repo chưa tự chứng minh được điều này.
+3. Điền ≥3 willing users trong `spec.md`; test với ≥5 người ngoài nhóm và cập nhật `validation/feedback-log.md` cùng slide 5.
+4. Xác nhận được phép gửi 24 golden cases tới OpenAI rồi chạy Run 02; không ghi đè Run 01.
+5. Chụp ảnh/quay video flow thật cho `demo-backup/`, dry run và kiểm tra PDF lần cuối.
+
+---
+
 # Mini Hackathon AI — Batch 03
 
 **SPEC → Prototype → Demo.** Đây không phải cuộc thi code — đây là cuộc thi **tư duy sản phẩm AI**.
