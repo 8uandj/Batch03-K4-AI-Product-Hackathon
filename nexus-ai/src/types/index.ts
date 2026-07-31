@@ -13,6 +13,9 @@ export type AiRecommendationStatus = 'suggested' | 'accepted' | 'dismissed';
 export type RiskEventType = 'overdue' | 'overload' | 'conflict' | 'burnout_signal';
 export type RiskSeverity = 'low' | 'medium' | 'high';
 export type TaskPriority = 'low' | 'medium' | 'high';
+export type DeadlineNotificationKind =
+  | 'assignee_check_in'
+  | 'leader_escalation';
 
 export type Json =
   | string
@@ -144,6 +147,19 @@ export interface RiskEvent {
   summary: string;
   metadata: Json;
   resolved_at: string | null;
+  created_at: string;
+}
+
+export interface DeadlineNotification {
+  id: string;
+  project_id: string;
+  task_id: string;
+  recipient_user_id: string;
+  kind: DeadlineNotificationKind;
+  content: string;
+  overdue_hours: number;
+  notification_day: string;
+  read_at: string | null;
   created_at: string;
 }
 
@@ -353,6 +369,39 @@ export type Database = {
             columns: ['task_id'];
             isOneToOne: false;
             referencedRelation: 'tasks';
+            referencedColumns: ['id'];
+          },
+        ]
+      >;
+      deadline_notifications: TableDefinition<
+        DeadlineNotification,
+        OptionalGenerated<
+          DeadlineNotification,
+          'id' | 'read_at' | 'created_at'
+        >,
+        Partial<
+          Pick<DeadlineNotification, 'content' | 'overdue_hours' | 'read_at'>
+        >,
+        [
+          {
+            foreignKeyName: 'deadline_notifications_project_id_fkey';
+            columns: ['project_id'];
+            isOneToOne: false;
+            referencedRelation: 'projects';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'deadline_notifications_task_id_fkey';
+            columns: ['task_id'];
+            isOneToOne: false;
+            referencedRelation: 'tasks';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'deadline_notifications_recipient_user_id_fkey';
+            columns: ['recipient_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
             referencedColumns: ['id'];
           },
         ]

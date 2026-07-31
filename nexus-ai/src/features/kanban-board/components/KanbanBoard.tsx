@@ -16,6 +16,9 @@ import {
   CheckCircle2,
   Circle,
   Clock3,
+  HeartHandshake,
+  RefreshCw,
+  ShieldAlert,
   Sparkles,
   UsersRound,
   WandSparkles,
@@ -23,6 +26,7 @@ import {
 } from "lucide-react";
 
 import type { TaskStatus } from "@/types";
+import { getOverdueHours } from "@/features/deadline-monitor/rules";
 
 import type { KanbanBoardData, KanbanTask } from "../types";
 import { AutoTaskingDialog } from "./AutoTaskingDialog";
@@ -40,6 +44,7 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
   const [tasks, setTasks] = useState(initialData.tasks);
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
   const [showAutoTasking, setShowAutoTasking] = useState(false);
+  const [monitoring, setMonitoring] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -59,6 +64,25 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
   const completion = tasks.length
     ? Math.round((tasksByStatus.done.length / tasks.length) * 100)
     : 0;
+  const overdueSummary = useMemo(() => {
+    const overdue = tasks
+      .map((task) => ({ task, hours: getOverdueHours(task) }))
+      .filter(
+        (
+          item,
+        ): item is {
+          task: KanbanTask;
+          hours: number;
+        } => item.hours !== null,
+      );
+
+    return {
+      total: overdue.length,
+      escalated: overdue.filter(
+        (item) => item.hours >= initialData.deadlineEscalationHours,
+      ).length,
+    };
+  }, [initialData.deadlineEscalationHours, tasks]);
 
   function onDragStart(event: DragStartEvent) {
     setActiveTask(tasks.find((task) => task.id === event.active.id) ?? null);
@@ -122,6 +146,47 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
           mode === "openai" ? "OpenAI" : "mock generator"
         }.`,
     });
+  }
+
+  async function runDeadlineMonitor() {
+    setMonitoring(true);
+    setToast(null);
+
+    try {
+      const response = await fetch(
+        `/api/projects/${initialData.projectId}/deadline-monitor`,
+        { method: "POST" },
+      );
+      const result = (await response.json()) as {
+        error?: string;
+        checkInsCreated?: number;
+        escalationsCreated?: number;
+        duplicateNotificationsSkipped?: number;
+      };
+
+      if (!response.ok) {
+        throw new Error(result.error || "Không thể quét tiến độ.");
+      }
+
+      setToast({
+        tone: "success",
+        message: `Nexus đã tạo ${result.checkInsCreated ?? 0} hỏi thăm riêng và ${result.escalationsCreated ?? 0} cảnh báo leader${
+          result.duplicateNotificationsSkipped
+            ? `; bỏ qua ${result.duplicateNotificationsSkipped} thông báo đã gửi hôm nay`
+            : ""
+        }.`,
+      });
+    } catch (error) {
+      setToast({
+        tone: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Không thể chạy Deadline Monitor.",
+      });
+    } finally {
+      setMonitoring(false);
+    }
   }
 
   return (
@@ -191,6 +256,50 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
             value={`${completion}%`}
           />
         </div>
+      </section>
+
+      <section className="grid gap-4 rounded-3xl border border-cyan-100 bg-gradient-to-r from-cyan-50 via-white to-violet-50 p-5 shadow-sm lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-black text-slate-900">
+            <HeartHandshake aria-hidden="true" className="text-cyan-600" size={19} />
+            Daily Deadline Copilot
+          </div>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+            Mỗi ngày Nexus hỏi thăm riêng người có task quá hạn. Sau{" "}
+            {initialData.deadlineEscalationHours} giờ, Bot Chat sẽ cảnh báo riêng
+            leader để kiểm tra blocker và điều phối hỗ trợ.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
+              <Clock3 aria-hidden="true" size={13} />
+              {overdueSummary.total} task đang trễ
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-700">
+              <ShieldAlert aria-hidden="true" size={13} />
+              {overdueSummary.escalated} task cần báo leader
+            </span>
+          </div>
+        </div>
+
+        {initialData.canAutoTask && initialData.dataSource === "supabase" ? (
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+            disabled={monitoring}
+            onClick={runDeadlineMonitor}
+            type="button"
+          >
+            <RefreshCw
+              aria-hidden="true"
+              className={monitoring ? "animate-spin" : ""}
+              size={16}
+            />
+            {monitoring ? "Đang quét…" : "Quét tiến độ hôm nay"}
+          </button>
+        ) : (
+          <span className="text-xs font-semibold text-slate-500">
+            Tự động quét lúc 08:00 hằng ngày
+          </span>
+        )}
       </section>
 
       {toast ? (

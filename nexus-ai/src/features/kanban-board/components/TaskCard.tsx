@@ -5,6 +5,10 @@ import { CSS } from "@dnd-kit/utilities";
 import { CalendarDays, GripVertical } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import {
+  formatOverdueDuration,
+  getOverdueHours,
+} from "@/features/deadline-monitor/rules";
 
 import type { KanbanTask } from "../types";
 
@@ -42,11 +46,14 @@ export function DraggableTaskCard({ task }: { task: KanbanTask }) {
     id: task.id,
     data: { status: task.status, task },
   });
+  const overdueHours = getOverdueHours(task);
 
   return (
     <article
       className={cn(
         "group rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_8px_30px_rgba(15,23,42,0.05)] transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_14px_40px_rgba(15,23,42,0.10)]",
+        overdueHours !== null &&
+          "border-rose-300 bg-gradient-to-br from-white to-rose-50/70 ring-1 ring-rose-100",
         isDragging && "opacity-30",
       )}
       ref={setNodeRef}
@@ -64,24 +71,29 @@ export function DraggableTaskCard({ task }: { task: KanbanTask }) {
             <GripVertical aria-hidden="true" size={17} />
           </button>
         }
+        overdueHours={overdueHours}
         task={task}
       />
     </article>
   );
 }
 export function TaskCardPreview({ task }: { task: KanbanTask }) {
+  const overdueHours = getOverdueHours(task);
+
   return (
     <article className="w-[320px] rotate-2 rounded-2xl border border-violet-200 bg-white p-4 shadow-2xl">
-      <TaskCardContent task={task} />
+      <TaskCardContent overdueHours={overdueHours} task={task} />
     </article>
   );
 }
 
 function TaskCardContent({
   dragHandle,
+  overdueHours,
   task,
 }: {
   dragHandle?: React.ReactNode;
+  overdueHours: number | null;
   task: KanbanTask;
 }) {
   return (
@@ -138,9 +150,16 @@ function TaskCardContent({
           </span>
         </div>
         {task.dueAt ? (
-          <span className="flex shrink-0 items-center gap-1 text-[10px] font-medium text-slate-400">
+          <span
+            className={cn(
+              "flex shrink-0 items-center gap-1 text-[10px] font-medium text-slate-400",
+              overdueHours !== null && "font-bold text-rose-600",
+            )}
+          >
             <CalendarDays aria-hidden="true" size={12} />
-            {formatDueDate(task.dueAt)}
+            {overdueHours === null
+              ? formatDueDate(task.dueAt)
+              : `Trễ ${formatOverdueDuration(overdueHours)}`}
           </span>
         ) : null}
       </div>

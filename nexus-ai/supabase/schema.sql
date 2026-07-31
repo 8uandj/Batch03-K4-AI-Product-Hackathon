@@ -160,6 +160,34 @@ create table public.risk_events (
   created_at timestamp with time zone not null default now()
 );
 
+create table public.deadline_notifications (
+  id uuid primary key default uuid_generate_v4(),
+  project_id uuid not null references public.projects(id) on delete cascade,
+  task_id uuid not null references public.tasks(id) on delete cascade,
+  recipient_user_id uuid not null references public.users(id) on delete cascade,
+  kind text not null
+    check (kind in ('assignee_check_in', 'leader_escalation')),
+  content text not null,
+  overdue_hours integer not null check (overdue_hours >= 0),
+  notification_day date not null,
+  read_at timestamp with time zone,
+  created_at timestamp with time zone not null default now(),
+  unique (task_id, recipient_user_id, kind, notification_day)
+);
+
+alter table public.deadline_notifications enable row level security;
+
+create policy "Users can read own deadline notifications"
+  on public.deadline_notifications for select
+  to authenticated
+  using (recipient_user_id = auth.uid());
+
+create policy "Users can mark own deadline notifications read"
+  on public.deadline_notifications for update
+  to authenticated
+  using (recipient_user_id = auth.uid())
+  with check (recipient_user_id = auth.uid());
+
 create index projects_owner_id_idx on public.projects (owner_id);
 create index project_members_user_id_idx on public.project_members (user_id);
 create index documents_project_id_idx on public.documents (project_id);
@@ -172,3 +200,7 @@ create index chat_rooms_project_id_idx on public.chat_rooms (project_id);
 create index chat_messages_room_id_created_at_idx
   on public.chat_messages (room_id, created_at);
 create index risk_events_project_id_idx on public.risk_events (project_id);
+create index deadline_notifications_recipient_idx
+  on public.deadline_notifications (recipient_user_id, project_id, created_at desc);
+create index deadline_notifications_project_idx
+  on public.deadline_notifications (project_id, created_at desc);
