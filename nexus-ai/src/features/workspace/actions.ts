@@ -234,6 +234,7 @@ export async function generateProjectRecommendations(
 
     if (error) return { error: error.message };
     const count = Array.isArray(data) ? data.length : 0;
+    revalidatePath(`/project/${projectId}`);
     return { message: `Đã tạo ${count} đề xuất chia việc từ tài liệu và hồ sơ thành viên.` };
   } catch (error) {
     return {

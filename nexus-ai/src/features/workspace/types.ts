@@ -42,6 +42,7 @@ export interface WorkspaceRecommendation {
   member: string;
   rationale: string;
   confidence: number;
+  suggestedTasks: string[];
 }
 
 export interface WorkspaceRiskEvent {
