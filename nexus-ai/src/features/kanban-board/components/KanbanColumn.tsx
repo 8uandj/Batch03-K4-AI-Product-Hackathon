@@ -50,15 +50,19 @@ const columnMeta = {
 >;
 
 export function KanbanColumn({
+  canManageRework,
   status,
   tasks,
 }: {
+  canManageRework: boolean;
   status: TaskStatus;
   tasks: KanbanTask[];
 }) {
+  const reworkLocked = status === "rework" && !canManageRework;
   const { isOver, setNodeRef } = useDroppable({
     id: status,
     data: { status },
+    disabled: reworkLocked,
   });
   const meta = columnMeta[status];
   const Icon = meta.icon;
@@ -94,7 +98,11 @@ export function KanbanColumn({
 
       <div className="flex flex-1 flex-col gap-3">
         {tasks.map((task) => (
-          <DraggableTaskCard key={task.id} task={task} />
+          <DraggableTaskCard
+            disabled={reworkLocked}
+            key={task.id}
+            task={task}
+          />
         ))}
         {tasks.length === 0 ? (
           <div
@@ -103,7 +111,9 @@ export function KanbanColumn({
               isOver && "border-violet-400 bg-white text-violet-600",
             )}
           >
-            Kéo task vào đây
+            {reworkLocked
+              ? "Chỉ PM được thay đổi task Rework"
+              : "Kéo task vào đây"}
           </div>
         ) : (
           <div className="min-h-10 flex-1 rounded-2xl border border-dashed border-transparent" />

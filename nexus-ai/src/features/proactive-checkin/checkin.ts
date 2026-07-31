@@ -1,7 +1,4 @@
-import {
-  buildWorkloadAnalysis,
-  type WorkloadTask,
-} from "../eq-radar/analysis";
+import type { WorkloadTask } from "../eq-radar/analysis.ts";
 
 export type ProactiveCheckInKind = "rework";
 
@@ -44,11 +41,17 @@ function shortTitle(value: string) {
   return trimmed.length > 80 ? `${trimmed.slice(0, 77)}…` : trimmed;
 }
 
-export function formatRemainingDeadline(dueAtStr?: string | null): string {
+export function canReceiveReworkAlert(role: "pm" | "member") {
+  return role === "member";
+}
+
+export function formatRemainingDeadline(
+  dueAtStr?: string | null,
+  now = new Date(),
+): string {
   if (!dueAtStr) return "Chưa thiết lập deadline";
 
   const dueAt = new Date(dueAtStr);
-  const now = new Date();
   const diffMs = dueAt.getTime() - now.getTime();
 
   if (diffMs <= 0) {
@@ -76,6 +79,7 @@ export function selectProactiveCheckIn({
   userId,
   userName,
   tasks,
+  now = new Date(),
 }: CheckInInput): ProactiveCheckIn | null {
   const name = safeDisplayName(userName);
 
@@ -87,10 +91,16 @@ export function selectProactiveCheckIn({
 
   const firstRework = reworkTasks[0];
   const taskTitle = shortTitle(firstRework.title);
-  const remainingDeadline = formatRemainingDeadline(firstRework.due_at);
+  const remainingDeadline = formatRemainingDeadline(firstRework.due_at, now);
 
   return {
-    id: ["rework", projectId, userId, firstRework.id].join(":"),
+    id: [
+      "rework",
+      projectId,
+      userId,
+      firstRework.id,
+      firstRework.updated_at ?? firstRework.due_at ?? "no-date",
+    ].join(":"),
     kind: "rework",
     severity: "critical",
     title: "⚠️ Cảnh báo Task Cần Làm Lại (Rework)",

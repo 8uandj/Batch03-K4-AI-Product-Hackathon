@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { validateKanbanTransition } from "@/features/kanban-board/transitions";
 import { ProjectAccessError, requireProjectAccess } from "@/features/workspace/access";
 import type { TaskStatus } from "@/types";
 
@@ -28,30 +28,41 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       });
     }
 
-    const access = await requireProjectAccess(projectId);
+    const { role, supabase } = await requireProjectAccess(projectId);
+    if (!supabase) {
+      throw new Error("Không thể kết nối dữ liệu project.");
+    }
 
-    if (status === "rework" && access.role !== "pm") {
+    const { data: currentTask, error: taskError } = await supabase
+      .from("tasks")
+      .select("id,status")
+      .eq("id", taskId)
+      .eq("project_id", projectId)
+      .maybeSingle();
+
+    if (taskError) throw new Error(taskError.message);
+    if (!currentTask) {
       return Response.json(
-        { error: "Chỉ Quản trị viên (PM) mới có quyền chuyển công việc sang cột Rework." },
-        { status: 403 },
+        { error: "Không tìm thấy task trong project này." },
+        { status: 404 },
+      );
+    }
+
+    const transition = validateKanbanTransition({
+      currentStatus: currentTask.status as TaskStatus,
+      nextStatus: status,
+      role,
+    });
+
+    if (!transition.allowed) {
+      return Response.json(
+        { error: transition.message },
+        { status: transition.code === "pm_required" ? 403 : 409 },
       );
     }
 
     const updatedAt = new Date().toISOString();
-
-    // Try admin client or user client to update task status
-    let dbClient = access.supabase;
-    try {
-      dbClient = createAdminClient();
-    } catch {
-      // fallback to access.supabase
-    }
-
-    if (!dbClient) {
-      throw new Error("Không thể kết nối dữ liệu project.");
-    }
-
-    const { data, error } = await dbClient
+    const { data, error } = await supabase
       .from("tasks")
       .update({ status, updated_at: updatedAt })
       .eq("id", taskId)
@@ -60,18 +71,18 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       .maybeSingle();
 
     if (error) {
-      // Graceful fallback if Supabase DB check constraint `tasks_status_check` hasn't been updated yet
       if (
         error.message.includes("tasks_status_check") ||
         error.message.includes("violates check constraint") ||
         error.code === "23514"
       ) {
-        console.warn("Lỗi database constraint Supabase tasks_status_check:", error.message);
-        return Response.json({
-          task: { id: taskId, status, updated_at: updatedAt },
-          persisted: true,
-          warning: "Chưa cập nhật constraint tasks_status_check trên Supabase SQL Editor.",
-        });
+        return Response.json(
+          {
+            error:
+              "Supabase chưa áp dụng migration Rework. Trạng thái task chưa được thay đổi.",
+          },
+          { status: 503 },
+        );
       }
       throw new Error(error.message);
     }

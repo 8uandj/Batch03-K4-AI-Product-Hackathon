@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { ProjectAccessError, requireProjectAccess } from "@/features/workspace/access";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -7,33 +6,24 @@ type RouteContext = { params: Promise<{ id: string }> };
 export async function GET(_request: Request, { params }: RouteContext) {
   try {
     const { id: projectId } = await params;
-    const access = await requireProjectAccess(projectId);
-    const { supabase } = access;
-
-    let dbClient = supabase;
-    try {
-      dbClient = createAdminClient();
-    } catch {
-      // fallback
-    }
-
-    if (!dbClient || projectId === "demo") {
+    const { supabase } = await requireProjectAccess(projectId);
+    if (!supabase || projectId === "demo") {
       return NextResponse.json({ tasks: [] });
     }
 
-    const { data: rawTasks, error } = await dbClient
+    const { data: rawTasks, error } = await supabase
       .from("tasks")
-      .select("id, title, status, updated_at, assignee_id")
+      .select("id,status,updated_at")
       .eq("project_id", projectId)
       .order("updated_at", { ascending: false });
 
     if (error) throw new Error(error.message);
 
     return NextResponse.json({
-      tasks: (rawTasks ?? []).map((t: any) => ({
-        id: t.id,
-        status: t.status,
-        updatedAt: t.updated_at,
+      tasks: (rawTasks ?? []).map((task) => ({
+        id: task.id,
+        status: task.status,
+        updatedAt: task.updated_at,
       })),
     });
   } catch (error) {

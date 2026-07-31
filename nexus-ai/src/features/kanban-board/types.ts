@@ -30,7 +30,7 @@ export type KanbanBoardData = {
   tasks: KanbanTask[];
   members: KanbanMember[];
   canAutoTask: boolean;
-  currentUserRole?: "pm" | "member";
+  currentUserRole: "pm" | "member";
   deadlineEscalationHours: number;
   dataSource: "mock" | "supabase";
 };

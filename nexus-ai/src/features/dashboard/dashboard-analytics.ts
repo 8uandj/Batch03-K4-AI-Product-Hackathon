@@ -121,16 +121,16 @@ export function calculateDashboardAnalytics(
     }
 
     const delayMs = now.getTime() - updatedAt.getTime();
-    const delayHours = Math.floor(delayMs / (1000 * 60 * 60));
+    const exactDelayHours = delayMs / (1000 * 60 * 60);
 
-    if (delayHours >= thresholdHours) {
+    if (exactDelayHours > thresholdHours) {
       redFlags.push({
         taskId: task.id,
         taskTitle: task.title.trim() || "Task khong co tieu de",
         assigneeId: task.assigneeId ?? null,
         assigneeName: task.assigneeName?.trim() || "Chua phan cong",
         updatedAt: task.updatedAt,
-        delayHours,
+        delayHours: Math.floor(exactDelayHours),
       });
     }
   }

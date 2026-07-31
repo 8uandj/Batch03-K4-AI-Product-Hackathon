@@ -44,6 +44,7 @@ test("đếm task, tính phần trăm và chỉ cắm cờ Doing quá 48 giờ",
   assert.deepEqual(result.stats, {
     todo: 1,
     doing: 2,
+    rework: 0,
     done: 1,
     total: 4,
     completionPercentage: 25,
@@ -126,5 +127,4 @@ test("lỗi Supabase được chuyển thành thông báo có ngữ cảnh", asy
       error.message.includes("permission denied"),
   );
 });
-
 

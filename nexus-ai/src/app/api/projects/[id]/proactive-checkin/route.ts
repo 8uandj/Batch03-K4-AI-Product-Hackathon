@@ -1,4 +1,5 @@
 import {
+  canReceiveReworkAlert,
   formatRemainingDeadline,
   selectProactiveCheckIn,
   type CheckInTask,
@@ -20,7 +21,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     const { id: projectId } = await params;
     const access = await requireProjectAccess(projectId);
 
-    if (!access.supabase) {
+    if (!access.supabase || !canReceiveReworkAlert(access.role)) {
       return Response.json(
         { checkIn: null },
         { headers: { "Cache-Control": "no-store" } },
@@ -45,7 +46,8 @@ export async function GET(_request: Request, { params }: RouteContext) {
           .select("id,title,status,priority,due_at,updated_at")
           .eq("project_id", projectId)
           .eq("assignee_id", user.id)
-          .eq("status", "rework"), // STRICTLY filter tasks where PM dragged to "rework"
+          .eq("status", "rework")
+          .order("updated_at", { ascending: false }),
       ]);
 
     if (profileError) {

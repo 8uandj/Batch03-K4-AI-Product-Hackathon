@@ -40,6 +40,7 @@ import {
   applyKanbanTaskStatusSnapshot,
   applyKanbanTaskStatusUpdate,
 } from "../sync";
+import { validateKanbanTransition } from "../transitions";
 import type { KanbanBoardData, KanbanTask } from "../types";
 import { AutoTaskingDialog } from "./AutoTaskingDialog";
 import { KanbanColumn } from "./KanbanColumn";
@@ -233,14 +234,17 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
 
     if (!currentTask || !nextStatus || currentTask.status === nextStatus) return;
 
-    const isPm = initialData.currentUserRole === "pm" || initialData.canAutoTask;
+    const transition = validateKanbanTransition({
+      currentStatus: currentTask.status,
+      nextStatus,
+      role: initialData.currentUserRole,
+    });
 
-    if (nextStatus === "rework" && !isPm) {
-      setShowPmOnlyReworkModal(true);
-      setToast({
-        tone: "error",
-        message: "🚫 Chỉ PM mới có quyền chỉnh rework.",
-      });
+    if (!transition.allowed) {
+      if (transition.code === "pm_required") {
+        setShowPmOnlyReworkModal(true);
+      }
+      setToast({ tone: "error", message: transition.message });
       return;
     }
 
@@ -252,33 +256,6 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
           : task,
       ),
     );
-
-    if (nextStatus === "rework") {
-      // ONLY trigger local chatbot event IF current user IS the assigned member of this task!
-      if (currentTask.assigneeId === initialData.currentUserId) {
-        const reworkData = {
-          taskId: currentTask.id,
-          taskTitle: currentTask.title,
-          assigneeId: currentTask.assigneeId,
-          assigneeName: currentTask.assigneeName,
-          dueAt: currentTask.dueAt,
-          projectId: initialData.projectId,
-          projectName: initialData.projectName,
-          timestamp: Date.now(),
-        };
-        try {
-          window.localStorage.setItem(
-            `nexus-rework-task:${initialData.projectId}`,
-            JSON.stringify(reworkData),
-          );
-        } catch {
-          // storage fallback
-        }
-        window.dispatchEvent(
-          new CustomEvent("kanban-task-rework", { detail: reworkData }),
-        );
-      }
-    }
 
     if (initialData.dataSource === "mock") {
       setToast({ tone: "success", message: "Đã cập nhật task trong mock state." });
@@ -294,8 +271,25 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
           body: JSON.stringify({ status: nextStatus }),
         },
       );
-      const result = (await response.json()) as { error?: string };
+      const result = (await response.json()) as {
+        error?: string;
+        task?: {
+          id: string;
+          status: TaskStatus;
+          updated_at: string;
+        };
+      };
       if (!response.ok) throw new Error(result.error || "Không thể cập nhật task.");
+      const persistedTask = result.task;
+      if (persistedTask) {
+        setTasks((current) =>
+          applyKanbanTaskStatusUpdate(current, {
+            id: persistedTask.id,
+            status: persistedTask.status,
+            updatedAt: persistedTask.updated_at,
+          }),
+        );
+      }
       setToast({ tone: "success", message: "Trạng thái task đã đồng bộ Supabase." });
     } catch (error) {
       setTasks(previousTasks);
@@ -674,6 +668,7 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
           {statuses.map((status) => (
             <KanbanColumn
+              canManageRework={initialData.currentUserRole === "pm"}
               key={status}
               status={status}
               tasks={tasksByStatus[status]}

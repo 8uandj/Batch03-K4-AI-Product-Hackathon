@@ -8,7 +8,6 @@ import {
   Bot,
   Clock3,
   ExternalLink,
-  HeartHandshake,
   Loader2,
   MessageCircleHeart,
   RefreshCw,
@@ -18,7 +17,9 @@ import {
   X,
 } from "lucide-react";
 
-import { formatRemainingDeadline, type ProactiveCheckIn } from "./checkin";
+import { createClient } from "@/lib/supabase/client";
+
+import type { ProactiveCheckIn } from "./checkin";
 
 type ProactiveCheckInBubbleProps = {
   projectId: string;
@@ -26,7 +27,7 @@ type ProactiveCheckInBubbleProps = {
 
 type QuickReply = "help" | "okay" | null;
 
-const POLL_INTERVAL_MS = 3000;
+const POLL_INTERVAL_MS = 15_000;
 const STORAGE_PREFIX = "nexus-proactive-checkin:";
 
 function readSnoozeUntil(checkInId: string) {
@@ -81,36 +82,7 @@ export function ProactiveCheckInBubble({ projectId }: ProactiveCheckInBubbleProp
           if (payload.projectName) resolvedProjectName = payload.projectName;
         }
 
-        // Fallback: Check local storage for recent Rework event on this project
-        if (!nextCheckIn) {
-          try {
-            const rawLocal = window.localStorage.getItem(`nexus-rework-task:${projectId}`);
-            if (rawLocal) {
-              const localData = JSON.parse(rawLocal);
-              const remainingDeadline = formatRemainingDeadline(localData.dueAt);
-              resolvedProjectName = localData.projectName || resolvedProjectName;
-
-              nextCheckIn = {
-                id: `rework:${projectId}:${localData.taskId}`,
-                kind: "rework",
-                severity: "critical",
-                title: "⚠️ Cảnh báo Task Cần Làm Lại (Rework)",
-                message: `Chào ${localData.assigneeName || "bạn"}! Quản trị viên (PM) vừa chuyển task "${localData.taskTitle}" sang cột Rework do chưa đạt yêu cầu.`,
-                detail: `📌 Task: ${localData.taskTitle}\n⏳ Hạn deadline: ${remainingDeadline}`,
-                activeTasks: 1,
-                task: {
-                  id: localData.taskId,
-                  title: localData.taskTitle,
-                  dueAt: localData.dueAt || new Date().toISOString(),
-                  daysOverdue: 0,
-                  remainingDeadline,
-                },
-              };
-            }
-          } catch {
-            // storage fallback
-          }
-        }
+        if (!isActive) return;
 
         setProjectName(resolvedProjectName);
 
@@ -135,52 +107,31 @@ export function ProactiveCheckInBubble({ projectId }: ProactiveCheckInBubbleProp
     }
 
     void loadCheckIn();
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`member-rework-alert:${projectId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "tasks",
+          filter: `project_id=eq.${projectId}`,
+        },
+        () => {
+          void loadCheckIn();
+        },
+      )
+      .subscribe();
 
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === "visible") void loadCheckIn();
     }, POLL_INTERVAL_MS);
 
-    // Handle real-time CustomEvent fired when PM drops task into Rework column
-    const handleReworkEvent = (e: Event) => {
-      const customEvt = e as CustomEvent;
-      const detail = customEvt.detail;
-
-      if (detail) {
-        const remainingDeadline = formatRemainingDeadline(detail.dueAt);
-        const newCheckIn: ProactiveCheckIn = {
-          id: `rework:${projectId}:${detail.taskId}`,
-          kind: "rework",
-          severity: "critical",
-          title: "⚠️ Cảnh báo Task Cần Làm Lại (Rework)",
-          message: `Chào ${detail.assigneeName || "bạn"}! Quản trị viên (PM) vừa chuyển task "${detail.taskTitle}" sang cột Rework do chưa đạt yêu cầu.`,
-          detail: `📌 Task: ${detail.taskTitle}\n⏳ Hạn deadline: ${remainingDeadline}`,
-          activeTasks: 1,
-          task: {
-            id: detail.taskId,
-            title: detail.taskTitle,
-            dueAt: detail.dueAt || new Date().toISOString(),
-            daysOverdue: 0,
-            remainingDeadline,
-          },
-        };
-
-        if (detail.projectName) setProjectName(detail.projectName);
-        setCheckIn(newCheckIn);
-        setIsHidden(false);
-        setQuickReply(null);
-        setIsOpen(true);
-        shownId.current = newCheckIn.id;
-      } else {
-        void loadCheckIn();
-      }
-    };
-
-    window.addEventListener("kanban-task-rework", handleReworkEvent);
-
     return () => {
       isActive = false;
       window.clearInterval(intervalId);
-      window.removeEventListener("kanban-task-rework", handleReworkEvent);
+      void supabase.removeChannel(channel);
     };
   }, [projectId]);
 
@@ -240,7 +191,7 @@ export function ProactiveCheckInBubble({ projectId }: ProactiveCheckInBubbleProp
         const text = await response.text();
         setAiSolution(text);
       }
-    } catch (err) {
+    } catch {
       setAiSolution(
         "🤖 AI đã tra cứu tài liệu dự án: Để hoàn thiện phần Rework này, bạn nên tham khảo tài liệu bài học trong hệ thống hoặc trao đổi ở Team Chat để PM hỗ trợ giải đáp.",
       );
