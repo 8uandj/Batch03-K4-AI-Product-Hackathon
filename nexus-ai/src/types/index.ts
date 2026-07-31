@@ -87,6 +87,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   assignee_id: string;
+  required_skills: string[];
   due_at: string | null;
   updated_at: string;
   created_at: string;
@@ -237,7 +238,7 @@ export type Database = {
         Task,
         OptionalGenerated<
           Task,
-          'id' | 'project_id' | 'description' | 'status' | 'priority' | 'due_at' | 'updated_at' | 'created_at'
+          'id' | 'project_id' | 'description' | 'status' | 'priority' | 'required_skills' | 'due_at' | 'updated_at' | 'created_at'
         >,
         Partial<Omit<Task, 'id'>>,
         [
