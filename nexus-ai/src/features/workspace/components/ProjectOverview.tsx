@@ -46,6 +46,9 @@ export function ProjectOverview({
 }: ProjectOverviewProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "planner" | "eq-radar">("overview");
   const [selectedMember, setSelectedMember] = useState<WorkspaceProject["members"][number] | null>(null);
+  const pendingInvites = invites.filter(
+    (invite) => invite.status === "pending" || invite.status === "awaiting_approval",
+  );
 
   return (
     <section className="space-y-6">
@@ -244,9 +247,9 @@ export function ProjectOverview({
               </div>
               {currentRole === "pm" ? <InviteMemberForm projectId={project.id} /> : null}
 
-              {invites.length ? (
+              {pendingInvites.length ? (
                 <div className="mt-4 space-y-3">
-                  {invites.map((invite) => (
+                  {pendingInvites.map((invite) => (
                     <div
                       className="rounded-lg border border-slate-200 p-3 text-sm"
                       key={invite.id}
@@ -254,16 +257,16 @@ export function ProjectOverview({
                       <div className="flex items-start justify-between gap-3">
                         <span className="min-w-0 break-all font-medium text-slate-800">{invite.email}</span>
                         <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${invite.status === "awaiting_approval" ? "bg-amber-50 text-amber-700" : invite.status === "accepted" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
-                          {invite.status === "awaiting_approval" ? "Chờ duyệt" : invite.status}
+                          {invite.status === "pending" || invite.status === "awaiting_approval" ? "Chờ duyệt" : invite.status}
                         </span>
                       </div>
                       <p className="mt-1 break-all text-xs text-slate-500">Role: {invite.role} · /join/{invite.token}</p>
-                      {currentRole === "pm" && invite.status === "awaiting_approval" ? <InviteApprovalActions inviteId={invite.id} projectId={project.id} /> : null}
+                      {currentRole === "pm" && (invite.status === "pending" || invite.status === "awaiting_approval") ? <InviteApprovalActions inviteId={invite.id} projectId={project.id} /> : null}
                     </div>
                   ))}
                 </div>
               ) : (
-                <EmptyState text="Chưa có invite pending/accepted." />
+                <EmptyState text="Không có invite nào đang chờ duyệt." />
               )}
             </section>
           </div>

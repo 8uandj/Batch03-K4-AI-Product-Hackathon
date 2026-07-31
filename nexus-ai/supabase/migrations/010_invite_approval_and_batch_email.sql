@@ -78,7 +78,7 @@ begin
 
   select * into invite from public.project_invites where id = invite_id for update;
   if invite.id is null then raise exception 'Không tìm thấy invite.'; end if;
-  if invite.status <> 'awaiting_approval' then raise exception 'Invite chưa ở trạng thái chờ duyệt.'; end if;
+  if invite.status not in ('pending', 'awaiting_approval') then raise exception 'Invite chưa ở trạng thái chờ duyệt.'; end if;
 
   insert into public.project_members (project_id, user_id, role)
   select invite.project_id, u.id, invite.role
@@ -107,7 +107,7 @@ begin
   if caller_id is null or not public.is_project_pm(invite.project_id) then
     raise exception 'Chỉ PM của project mới được từ chối thành viên.';
   end if;
-  if invite.status <> 'awaiting_approval' then raise exception 'Invite chưa ở trạng thái chờ duyệt.'; end if;
+  if invite.status not in ('pending', 'awaiting_approval') then raise exception 'Invite chưa ở trạng thái chờ duyệt.'; end if;
 
   update public.project_invites set status = 'revoked' where id = invite.id;
   return invite.project_id;

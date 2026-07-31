@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
@@ -191,7 +192,9 @@ export async function approveProjectInvite(
     if (role !== "pm") return { error: "Chỉ PM mới được duyệt thành viên." };
     if (!supabase) return { error: "Không thể kết nối dữ liệu project." };
     const { error } = await supabase.rpc("approve_project_invite", { invite_id: inviteId });
-    return error ? { error: error.message } : {};
+    if (error) return { error: error.message };
+    revalidatePath(`/project/${projectId}`);
+    return {};
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Không thể duyệt thành viên." };
   }
@@ -208,7 +211,9 @@ export async function rejectProjectInvite(
     if (role !== "pm") return { error: "Chỉ PM mới được từ chối thành viên." };
     if (!supabase) return { error: "Không thể kết nối dữ liệu project." };
     const { error } = await supabase.rpc("reject_project_invite", { invite_id: inviteId });
-    return error ? { error: error.message } : {};
+    if (error) return { error: error.message };
+    revalidatePath(`/project/${projectId}`);
+    return {};
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Không thể từ chối thành viên." };
   }
