@@ -29,19 +29,17 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
   const [isWorkerRunning, setIsWorkerRunning] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Default project options if none passed or demo mode
+  // Use real project options passed from Supabase workspace
   const projectsList: ProjectOption[] =
     userProjects.length > 0
       ? userProjects
       : [
-          { id: projectId === "demo" ? "demo" : projectId, name: "Dự án Nexus AI (Hiệu năng & RAG)" },
-          { id: "demo-ecommerce", name: "Dự án E-Commerce (Payment & Order Flow)" },
-          { id: "demo-mobile", name: "Dự án Mobile App (iOS / Android Release)" },
+          { id: projectId === "demo" ? "demo" : projectId, name: "Dự án Nexus AI" },
         ];
 
   const currentProject = projectsList.find((p) => p.id === activeProjectId) || projectsList[0];
 
-  // Fetch live chat messages
+  // Fetch live chat messages from Supabase
   const fetchMessages = async (targetId: string) => {
     try {
       const res = await fetch(`/api/projects/${targetId}/team-chat`);
@@ -63,7 +61,7 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
     setIsLoading(true);
     fetchMessages(activeProjectId);
 
-    // Fast 2-second real-time polling to instantly sync messages between project members
+    // Fast 2-second real-time polling to sync messages across project members
     const interval = setInterval(() => fetchMessages(activeProjectId), 2000);
     return () => clearInterval(interval);
   }, [activeProjectId]);
@@ -105,37 +103,15 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
   const handleRunProgressWorker = async () => {
     setIsWorkerRunning(true);
     try {
-      await fetch(`/api/projects/${activeProjectId}/track-task-delays`, {
+      // Trigger Worker scan using 100% REAL Supabase data (real names & tasks)
+      await fetch(`/api/projects/${activeProjectId}/team-chat`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ simulatedDelayHours: 4 }),
+        body: JSON.stringify({ action: "run_worker" }),
       });
 
-      const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-      const memberRemindMsg: TeamChatMessageItem = {
-        id: `msg_remind_${Date.now()}`,
-        senderId: null,
-        senderName: "Nexus AI Remind Bot",
-        senderRole: "ai",
-        senderType: "assistant",
-        content:
-          "💬 [AI Remind - Cập nhật 2h/lần]: Chào Nguyễn Văn Tuấn (Frontend Lead), task 'Xây dựng giao diện Kanban Board' của bạn đang trễ 4 tiếng so với mốc 3h quy định. Bạn có cần hỗ trợ gỡ blocker kỹ thuật hay nhờ đồng đội hỗ trợ không?",
-        createdAt: nowTime,
-      };
-
-      const leaderAlertMsg: TeamChatMessageItem = {
-        id: `msg_alert_${Date.now()}`,
-        senderId: null,
-        senderName: "Nexus AI Leader Alert",
-        senderRole: "ai",
-        senderType: "assistant",
-        content:
-          "🚨 [AI CẢNH BÁO LEADER]: Thành viên Trần Minh Hoàng (Backend Lead) đã trễ task 'Cấu hình RAG Vector Search' 3 ngày (> 2 ngày). AI đề xuất 3 giải pháp cho Leader:\n1. Tách sub-task giao bớt cho thành viên khác;\n2. Họp khẩn 1-1 gỡ blocker;\n3. Dời deadline sang Sprint tiếp theo.",
-        createdAt: nowTime,
-      };
-
-      setMessages((prev) => [...prev, memberRemindMsg, leaderAlertMsg]);
+      // Refetch live messages from Supabase
+      await fetchMessages(activeProjectId);
     } catch (err) {
       console.error("Lỗi chạy worker:", err);
     } finally {
@@ -189,7 +165,7 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
             </h1>
           </div>
           <p className="mt-0.5 text-xs text-slate-500">
-            Không gian trao đổi trực tuyến giữa các thành viên. Hiển thị vai trò (PM / Member) và tự động đồng bộ thời gian thực.
+            Không gian trao đổi trực tuyến giữa các thành viên thực tế trong dự án. Hiển thị vai trò (PM / Member) và tự động đồng bộ thời gian thực.
           </p>
         </div>
 

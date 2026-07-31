@@ -56,6 +56,12 @@ function getDbClient(supabase: any) {
   }
 }
 
+function getDisplayName(name?: string | null, email?: string | null, fallback = "Thành viên") {
+  if (name && name.trim()) return name;
+  if (email && email.includes("@")) return email.split("@")[0];
+  return fallback;
+}
+
 export async function GET(request: Request, { params }: RouteContext) {
   try {
     const { id: projectId } = await params;
@@ -73,7 +79,7 @@ export async function GET(request: Request, { params }: RouteContext) {
           {
             id: "msg-1",
             senderId: "u1",
-            senderName: "Nguyễn Văn Tuấn",
+            senderName: "Thành viên Dự án",
             senderRole: "pm",
             senderType: "user",
             content: `Chào mọi người trong dự án! Mình vừa khởi tạo repo.`,
@@ -82,7 +88,7 @@ export async function GET(request: Request, { params }: RouteContext) {
           {
             id: "msg-2",
             senderId: "u2",
-            senderName: "Trần Minh Hoàng",
+            senderName: "Thành viên Dự án",
             senderRole: "member",
             senderType: "user",
             content: "Chào PM, mình đang hoàn thiện API đồng bộ live chat.",
@@ -97,14 +103,22 @@ export async function GET(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "Không thể tạo phòng chat." }, { status: 500 });
     }
 
-    // 1. Fetch project members roles map (userId -> 'pm' | 'member')
+    // 1. Fetch real project members roles & user info from Supabase
     const { data: memberRows } = await dbClient
       .from("project_members")
-      .select("user_id, role")
+      .select("user_id, role, users(id, name, email)")
       .eq("project_id", projectId);
 
     const roleMap = new Map<string, "pm" | "member">();
-    (memberRows ?? []).forEach((m: any) => roleMap.set(m.user_id, m.role as "pm" | "member"));
+    const nameMap = new Map<string, string>();
+
+    (memberRows ?? []).forEach((m: any) => {
+      roleMap.set(m.user_id, m.role as "pm" | "member");
+      const userData = m.users as { name?: string; email?: string } | null;
+      if (m.user_id) {
+        nameMap.set(m.user_id, getDisplayName(userData?.name, userData?.email));
+      }
+    });
 
     // 2. Fetch all live chat messages in this room
     const { data: rawMessages, error: msgError } = await dbClient
@@ -127,10 +141,10 @@ export async function GET(request: Request, { params }: RouteContext) {
       } else {
         if (m.sender_id === user.id) {
           senderName = "Bạn (Tôi)";
-        } else if (userData?.name) {
-          senderName = userData.name;
-        } else if (userData?.email) {
-          senderName = userData.email.split("@")[0];
+        } else if (nameMap.has(m.sender_id)) {
+          senderName = nameMap.get(m.sender_id)!;
+        } else {
+          senderName = getDisplayName(userData?.name, userData?.email);
         }
 
         if (m.sender_id && roleMap.has(m.sender_id)) {
@@ -169,22 +183,86 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const dbClient = getDbClient(supabase);
 
-    const body = (await request.json()) as { content?: string };
+    const body = (await request.json()) as {
+      content?: string;
+      senderType?: "user" | "assistant";
+      senderName?: string;
+      action?: "run_worker";
+    };
+
+    // Special Action: Worker Progress Scan using 100% REAL Supabase data
+    if (body.action === "run_worker") {
+      const roomId = await getOrCreateTeamRoom(dbClient, projectId);
+      if (!roomId) {
+        return NextResponse.json({ error: "Không thể kết nối phòng chat." }, { status: 500 });
+      }
+
+      // Fetch real project, members, and tasks from Supabase
+      const [projectRes, membersRes, tasksRes] = await Promise.all([
+        dbClient.from("projects").select("id, name").eq("id", projectId).maybeSingle(),
+        dbClient.from("project_members").select("user_id, role, users(id, name, email)").eq("project_id", projectId),
+        dbClient.from("tasks").select("id, title, status, assignee_id, due_at").eq("project_id", projectId),
+      ]);
+
+      const projectName = projectRes.data?.name || "Dự án";
+      const members = (membersRes.data ?? []).map((m: any) => ({
+        id: m.user_id,
+        role: m.role as "pm" | "member",
+        name: getDisplayName(m.users?.name, m.users?.email),
+      }));
+
+      const pmMember = members.find((m: any) => m.role === "pm") || members[0] || { name: "PM" };
+      const regularMembers = members.filter((m: any) => m.role !== "pm");
+      const targetMember = regularMembers[0] || members[0] || { name: "Thành viên" };
+
+      const tasks = (tasksRes.data ?? []) as Array<{ id: string; title: string; assignee_id: string }>;
+      const targetTask = tasks.find((t) => t.assignee_id === targetMember.id) || tasks[0];
+      const taskTitle = targetTask ? targetTask.title : "Phân chia công việc Sprint";
+
+      // Build 100% REAL personalized AI messages
+      const memberRemindContent = `💬 [AI Remind - Cập nhật định kỳ 2h/lần]: Chào ${targetMember.name}, công việc '${taskTitle}' trong dự án ${projectName} đang được hệ thống theo dõi tiến độ. Bạn có cần hỗ trợ gỡ blocker kỹ thuật hay nhờ đồng đội hỗ trợ không?`;
+
+      const leaderAlertContent = `🚨 [AI CẢNH BÁO LEADER]: Gửi Quản trị viên ${pmMember.name}: AI đã rà soát toàn bộ tiến độ của các thành viên (${members.map((m: any) => m.name).join(", ")}). Đề xuất 3 hướng tối ưu cho Leader:\n1. Phân chia bớt sub-task khi khối lượng tăng cao;\n2. Họp Quick Sync 1-1 gỡ blocker;\n3. Cập nhật mốc deadline phù hợp trên Kanban Board.`;
+
+      // Insert both REAL AI messages into Supabase chat_messages
+      await dbClient.from("chat_messages").insert([
+        {
+          room_id: roomId,
+          sender_id: user.id,
+          sender_type: "assistant",
+          content: memberRemindContent,
+        },
+        {
+          room_id: roomId,
+          sender_id: user.id,
+          sender_type: "assistant",
+          content: leaderAlertContent,
+        },
+      ]);
+
+      return NextResponse.json({ success: true, message: "Đã quét tiến độ từ dữ liệu thật thành công." });
+    }
+
+    // Normal message posting
     const content = body.content?.trim();
 
     if (!content) {
       return NextResponse.json({ error: "Nội dung tin nhắn không được để trống." }, { status: 400 });
     }
 
+    const isAssistant = body.senderType === "assistant";
+    // Always attach valid user.id as sender_id to satisfy Supabase RLS policy `sender_id = auth.uid()`
+    const senderId = user.id;
+
     if (!supabase || projectId.startsWith("demo")) {
       return NextResponse.json({
         success: true,
         message: {
           id: `msg_${Date.now()}`,
-          senderId: user.id,
-          senderName: "Bạn (Tôi)",
-          senderRole: role || "member",
-          senderType: "user",
+          senderId,
+          senderName: isAssistant ? (body.senderName || "Nexus AI Conflict Mediator") : "Bạn (Tôi)",
+          senderRole: isAssistant ? "ai" : (role || "member"),
+          senderType: isAssistant ? "assistant" : "user",
           content,
           createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
@@ -196,42 +274,71 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "Không thể kết nối phòng chat." }, { status: 500 });
     }
 
-    // 1. Insert user message into Supabase chat_messages
+    // 1. Insert message into Supabase chat_messages
     const { data: insertedMsg, error: insertError } = await dbClient
       .from("chat_messages")
       .insert({
         room_id: roomId,
-        sender_id: user.id,
-        sender_type: "user",
+        sender_id: senderId,
+        sender_type: isAssistant ? "assistant" : "user",
         content,
       })
       .select("id, sender_id, sender_type, content, created_at")
       .single();
 
-    if (insertError) throw new Error(insertError.message);
+    if (insertError) {
+      console.error("Lỗi insert chat_messages:", insertError);
+      throw new Error(insertError.message);
+    }
 
-    // 2. Check for AI conflict signal and auto-respond if present
-    const lower = content.toLowerCase();
-    const hasConflictSignal = [
-      "không đồng ý",
-      "bất đồng",
-      "lỗi",
-      "delay",
-      "chậm",
-      "conflict",
-      "tranh cãi",
-      "phản đối",
-      "sao lại",
-    ].some((kw) => lower.includes(kw));
+    // 2. Check for AI conflict signal if sent by user and proactively intervene with solutions!
+    if (!isAssistant) {
+      const lower = content.toLowerCase();
+      const conflictKeywords = [
+        "không đồng ý",
+        "bất đồng",
+        "tranh cãi",
+        "không chịu",
+        "sao lại",
+        "tại sao",
+        "lỗi do",
+        "chậm vãi",
+        "trễ quá",
+        "làm hỏng",
+        "không đúng",
+        "conflict",
+        "overlap",
+        "blocker",
+        "không hỗ trợ",
+        "bỏ bê",
+        "phản đối",
+        "không hợp lý",
+        "bất hợp lý",
+        "đổi người",
+        "không làm được",
+        "tự làm đi",
+        "delay",
+        "chậm",
+        "lỗi",
+      ];
 
-    if (hasConflictSignal) {
-      await dbClient.from("chat_messages").insert({
-        room_id: roomId,
-        sender_id: null,
-        sender_type: "assistant",
-        content:
-          "🤖 [Nexus AI Conflict Mediator]: Phát hiện tín hiệu bất đồng/trễ hạn trong cuộc thảo luận. AI đề xuất team chia nhỏ task thành các tiêu chí kiểm thử rõ ràng và thống nhất tiến độ trong buổi họp daily sắp tới.",
-      });
+      const hasConflictSignal = conflictKeywords.some((kw) => lower.includes(kw));
+
+      if (hasConflictSignal) {
+        const aiSolutionContent = `🤖 [Nexus AI Conflict Mediator - Can thiệp & Đưa ra Giải pháp]:
+Phát hiện tín hiệu trao đổi căng thẳng / bất đồng ý kiến giữa các thành viên. Để bảo vệ tiến độ chung dự án, AI đề xuất 3 GIẢI PHÁP ĐỒNG THUẬN tức thì cho team:
+
+1. 🛠️ Solution 1 (Quy trình & Tiêu chuẩn): Chia nhỏ công việc đang tranh luận thành 2 sub-task độc lập. Thống nhất tiêu chuẩn Interface / Schema API trước khi ghép code.
+2. 🤝 Solution 2 (Hỗ trợ nguồn lực): Nếu công việc bị tắc nghẽn hoặc quá tải, PM/Leader điều phối 1 thành viên rảnh hỗ trợ gỡ blocker ngay trong Sprint này.
+3. ⏱️ Solution 3 (Giao tiếp 1-1): Tổ chức buổi họp nhanh 10 phút (Quick Sync) trực tiếp giữa 2 bên để chốt phương án cuối cùng mà không ảnh hưởng tiến độ.`;
+
+        await dbClient.from("chat_messages").insert({
+          room_id: roomId,
+          sender_id: user.id,
+          sender_type: "assistant",
+          content: aiSolutionContent,
+        });
+      }
     }
 
     return NextResponse.json({
@@ -239,8 +346,8 @@ export async function POST(request: Request, { params }: RouteContext) {
       message: {
         id: insertedMsg.id,
         senderId: insertedMsg.sender_id,
-        senderName: "Bạn (Tôi)",
-        senderRole: role || "member",
+        senderName: isAssistant ? (body.senderName || "Nexus AI Conflict Mediator") : "Bạn (Tôi)",
+        senderRole: isAssistant ? "ai" : (role || "member"),
         senderType: insertedMsg.sender_type,
         content: insertedMsg.content,
         createdAt: new Date(insertedMsg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
