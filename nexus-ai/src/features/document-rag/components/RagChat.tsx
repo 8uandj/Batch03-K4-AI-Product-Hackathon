@@ -1,11 +1,20 @@
 "use client";
 
-import { Bot, Send, UserRound } from "lucide-react";
+import {
+  AlertTriangle,
+  Bot,
+  HeartHandshake,
+  Send,
+  UserRound,
+} from "lucide-react";
+import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
+import type { DeadlineBotNotification } from "@/features/deadline-monitor/data";
 import type { ChatMessage, RagSourceReference } from "../types";
 
 type RagChatProps = {
+  initialDeadlineNotifications?: DeadlineBotNotification[];
   projectId: string;
   projectName: string;
 };
@@ -17,7 +26,11 @@ const initialMessage: ChatMessage = {
     "Chào bạn, mình là Nexus Knowledge Bot. Hãy hỏi mình về tài liệu của dự án; câu trả lời sẽ kèm nguồn để bạn kiểm tra.",
 };
 
-export function RagChat({ projectId, projectName }: RagChatProps) {
+export function RagChat({
+  initialDeadlineNotifications = [],
+  projectId,
+  projectName,
+}: RagChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -110,6 +123,51 @@ export function RagChat({ projectId, projectName }: RagChatProps) {
         aria-live="polite"
         className="flex-1 space-y-4 overflow-y-auto bg-slate-50 px-5 py-5"
       >
+        {initialDeadlineNotifications.map((notification) => {
+          const isEscalation = notification.kind === "leader_escalation";
+          const Icon = isEscalation ? AlertTriangle : HeartHandshake;
+
+          return (
+            <article className="flex gap-3" key={notification.id}>
+              <MessageAvatar role="assistant" />
+              <div
+                className={`max-w-[min(760px,90%)] rounded-xl border px-4 py-3 shadow-sm ${
+                  isEscalation
+                    ? "border-rose-200 bg-rose-50"
+                    : "border-cyan-200 bg-cyan-50"
+                }`}
+              >
+                <div
+                  className={`flex flex-wrap items-center gap-2 text-xs font-semibold ${
+                    isEscalation ? "text-rose-700" : "text-cyan-800"
+                  }`}
+                >
+                  <Icon aria-hidden="true" size={15} />
+                  <span>
+                    {isEscalation
+                      ? "Cảnh báo riêng cho leader"
+                      : "Nexus hỏi thăm riêng"}
+                  </span>
+                  <span className="font-normal opacity-70">
+                    · {formatNotificationTime(notification.createdAt)}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-slate-800">
+                  {notification.content}
+                </p>
+                <Link
+                  className={`mt-3 inline-flex text-xs font-bold underline-offset-4 hover:underline ${
+                    isEscalation ? "text-rose-700" : "text-cyan-800"
+                  }`}
+                  href={`/project/${projectId}/board`}
+                >
+                  Mở task trên Kanban →
+                </Link>
+              </div>
+            </article>
+          );
+        })}
+
         {messages.map((message) => {
           const isUser = message.role === "user";
 
@@ -189,6 +247,14 @@ export function RagChat({ projectId, projectName }: RagChatProps) {
       </div>
     </section>
   );
+}
+
+function formatNotificationTime(value: string) {
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "Asia/Ho_Chi_Minh",
+  }).format(new Date(value));
 }
 
 function MessageAvatar({ role }: { role: ChatMessage["role"] }) {

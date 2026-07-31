@@ -37,7 +37,8 @@ export async function ChatHub({ projectId, active = "overview" }: ChatHubProps) 
           Chọn không gian chat
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-          Team Chat dùng cho trao đổi giữa thành viên. Bot Chat dùng để hỏi Nexus AI về tài liệu, scope, deadline và context dự án.
+          Team Chat dùng cho trao đổi giữa thành viên. Bot Chat dùng để hỏi Nexus AI
+          về tài liệu và nhận các hỏi thăm/cảnh báo deadline riêng theo vai trò.
         </p>
       </div>
 
@@ -49,7 +50,7 @@ export async function ChatHub({ projectId, active = "overview" }: ChatHubProps) 
           title="Team Chat"
         />
         <ChatSpaceCard
-          description="Hỏi đáp với Knowledge Bot, upload tài liệu và xem nguồn RAG."
+          description="Hỏi đáp Knowledge RAG, nhận hỏi thăm riêng khi trễ và cảnh báo dành cho leader."
           href={`/project/${projectId}/chat/bot`}
           icon="bot"
           title="Bot Chat"

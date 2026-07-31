@@ -38,6 +38,12 @@ type TaskRow = {
 function fallbackName(user: UserRow) {
   return user.name || user.email?.split("@")[0] || user.id.slice(0, 8);
 }
+
+function deadlineEscalationHours() {
+  const parsed = Number(process.env.DEADLINE_ESCALATION_HOURS);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 48;
+}
+
 export async function getKanbanBoardData(
   projectId: string,
 ): Promise<KanbanBoardData | null> {
@@ -140,6 +146,7 @@ export async function getKanbanBoardData(
     tasks,
     members,
     canAutoTask: access.role === "pm",
+    deadlineEscalationHours: deadlineEscalationHours(),
     dataSource: "supabase",
   };
 }

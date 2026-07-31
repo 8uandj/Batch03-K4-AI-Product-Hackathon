@@ -10,6 +10,8 @@ Giá trị cốt lõi của Nexus AI là kết hợp IQ và EQ trong quản lý 
 - Nexus Knowledge Hub: upload tài liệu, tạo embedding, hỏi đáp RAG theo ngữ cảnh dự án.
 - Kanban Board: quản lý task theo trạng thái `todo`, `doing`, `done`, kéo thả
   bằng dnd-kit và AI Auto-Tasking có structured output.
+- Daily Deadline Copilot: quét task quá hạn mỗi ngày, hỏi thăm riêng assignee
+  và cảnh báo riêng PM trong Bot Chat khi task trễ từ 48 giờ.
 - PM Dashboard: thống kê tiến độ Done/Total và hiển thị Red Flag khi task `doing` quá 48 giờ.
 - EQ Radar: theo dõi dấu hiệu trễ deadline/quá tải, làm nền tảng cho trợ lý nhắc nhở và coaching 1-1.
 
@@ -97,7 +99,33 @@ Schema hiện tại gồm:
 - `users`: profile, skills, EQ answers.
 - `documents`: nội dung tài liệu và embedding `vector(1536)`.
 - `tasks`: task Kanban với status `todo | doing | done`.
+- `deadline_notifications`: hộp thư riêng cho check-in và escalation deadline.
 - `match_documents`: RPC similarity search cho RAG.
+
+Nếu database đã được tạo trước khi có Deadline Copilot, chạy thêm migration:
+
+```text
+supabase/migrations/014_deadline_monitor.sql
+```
+
+## Daily Deadline Copilot
+
+Vercel Cron gọi endpoint `/api/cron/deadline-monitor` lúc `01:00 UTC`,
+tương đương `08:00` tại Việt Nam. Cấu hình các biến server-side:
+
+```env
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+CRON_SECRET=<random-secret>
+DEADLINE_ESCALATION_HOURS=48
+```
+
+- Task quá hạn: Bot Chat hỏi thăm riêng assignee một lần mỗi ngày.
+- Task quá hạn từ ngưỡng cấu hình: Bot Chat đồng thời cảnh báo riêng các PM.
+- PM có thể kiểm thử ngay bằng nút **Quét tiến độ hôm nay** trên Kanban.
+- Unique constraint theo task/người nhận/loại/ngày ngăn gửi trùng khi cron chạy lại.
+
+`SUPABASE_SERVICE_ROLE_KEY` và `CRON_SECRET` chỉ được đặt ở server/Vercel,
+không dùng trong biến `NEXT_PUBLIC_*` và không commit vào Git.
 
 Ví dụ query task:
 
@@ -134,6 +162,7 @@ http://localhost:3000/pm-dashboard
 npm run lint
 npm run build
 node --test src/features/dashboard/dashboard-analytics.test.ts
+node --test src/features/deadline-monitor/rules.test.ts
 ```
 
 `node --test` có thể hiện warning `MODULE_TYPELESS_PACKAGE_JSON`; hiện tại test vẫn pass. Khi team chuẩn hóa test runner, có thể chuyển sang Vitest hoặc thêm config ESM riêng.
@@ -155,6 +184,7 @@ nexus-ai/
 │   │   ├── onboarding/    # Dev 1: profile/CV/EQ onboarding
 │   │   ├── document-rag/  # Dev 2: Knowledge Hub/RAG
 │   │   ├── kanban-board/  # Dev 3: board kéo thả task
+│   │   ├── deadline-monitor/ # Daily check-in và escalation deadline
 │   │   └── eq-radar/      # PM/EQ health insights
 │   ├── lib/               # Supabase client, utils, AI config
 │   └── types/             # TypeScript interfaces/Database contract
