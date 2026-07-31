@@ -65,6 +65,7 @@ export function DraggableTaskCard({ task }: { task: KanbanTask }) {
             aria-label={`Kéo task ${task.title}`}
             className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-400"
             type="button"
+            suppressHydrationWarning
             {...attributes}
             {...listeners}
           >
@@ -99,14 +100,21 @@ function TaskCardContent({
   return (
     <>
       <div className="flex items-start justify-between gap-3">
-        <span
-          className={cn(
-            "rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]",
-            priorityStyle[task.priority],
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span
+            className={cn(
+              "rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]",
+              priorityStyle[task.priority],
+            )}
+          >
+            {priorityLabel[task.priority]}
+          </span>
+          {task.status === "rework" && (
+            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-700 border border-rose-200">
+              ⚠️ Rework
+            </span>
           )}
-        >
-          {priorityLabel[task.priority]}
-        </span>
+        </div>
         {dragHandle}
       </div>
 

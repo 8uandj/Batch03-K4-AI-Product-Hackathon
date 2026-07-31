@@ -93,7 +93,7 @@ function countByStatus(tasks: TaskRow[]) {
       if (isTaskStatus(task.status)) stats[task.status] += 1;
       return stats;
     },
-    { todo: 0, doing: 0, done: 0 },
+    { todo: 0, doing: 0, rework: 0, done: 0 },
   );
 }
 

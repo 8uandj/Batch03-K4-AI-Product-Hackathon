@@ -1,23 +1,24 @@
 import {
   buildWorkloadAnalysis,
   type WorkloadTask,
-} from "../eq-radar/analysis.ts";
+} from "../eq-radar/analysis";
 
-export type ProactiveCheckInKind = "overdue" | "overload";
+export type ProactiveCheckInKind = "rework";
 
 export type ProactiveCheckIn = {
   id: string;
   kind: ProactiveCheckInKind;
-  severity: "warning" | "critical";
+  severity: "critical";
   title: string;
   message: string;
   detail: string;
   activeTasks: number;
-  task?: {
+  task: {
     id: string;
     title: string;
     dueAt: string;
     daysOverdue: number;
+    remainingDeadline: string;
   };
 };
 
@@ -43,94 +44,65 @@ function shortTitle(value: string) {
   return trimmed.length > 80 ? `${trimmed.slice(0, 77)}…` : trimmed;
 }
 
-function validDate(value: string | null | undefined) {
-  if (!value) return null;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+export function formatRemainingDeadline(dueAtStr?: string | null): string {
+  if (!dueAtStr) return "Chưa thiết lập deadline";
+
+  const dueAt = new Date(dueAtStr);
+  const now = new Date();
+  const diffMs = dueAt.getTime() - now.getTime();
+
+  if (diffMs <= 0) {
+    const overdueHours = Math.max(1, Math.floor(Math.abs(diffMs) / 3_600_000));
+    const overdueDays = Math.floor(overdueHours / 24);
+    if (overdueDays > 0) {
+      return `Đã quá hạn ${overdueDays} ngày ${overdueHours % 24} giờ (Cần sửa gấp!)`;
+    }
+    return `Đã quá hạn ${overdueHours} giờ (Cần sửa gấp!)`;
+  }
+
+  const remainingHours = Math.floor(diffMs / 3_600_000);
+  const remainingDays = Math.floor(remainingHours / 24);
+  const hoursLeft = remainingHours % 24;
+
+  if (remainingDays > 0) {
+    return `Còn ${remainingDays} ngày ${hoursLeft} giờ nữa đến hạn`;
+  }
+  return `Còn ${remainingHours} giờ nữa đến hạn`;
 }
 
+// STRICT REQUIREMENT: ONLY return a check-in bubble when member has a task in REWORK status
 export function selectProactiveCheckIn({
   projectId,
   userId,
   userName,
   tasks,
-  now = new Date(),
 }: CheckInInput): ProactiveCheckIn | null {
-  const openTasks = tasks.filter((task) => task.status !== "done");
-  const overdueTasks = openTasks
-    .map((task) => ({ task, dueAt: validDate(task.due_at) }))
-    .filter(
-      (item): item is { task: CheckInTask; dueAt: Date } =>
-        Boolean(item.dueAt && item.dueAt.getTime() < now.getTime()),
-    )
-    .sort((left, right) => left.dueAt.getTime() - right.dueAt.getTime());
-
   const name = safeDisplayName(userName);
-  const firstOverdue = overdueTasks[0];
 
-  if (firstOverdue) {
-    const daysOverdue = Math.max(
-      1,
-      Math.ceil(
-        (now.getTime() - firstOverdue.dueAt.getTime()) /
-          (24 * 60 * 60 * 1000),
-      ),
-    );
-    const taskTitle = shortTitle(firstOverdue.task.title);
-
-    return {
-      id: [
-        "overdue",
-        projectId,
-        userId,
-        firstOverdue.task.id,
-        firstOverdue.dueAt.toISOString(),
-      ].join(":"),
-      kind: "overdue",
-      severity: daysOverdue >= 3 ? "critical" : "warning",
-      title: "Nexus thấy một deadline đã trễ",
-      message: `Chào ${name}, task “${taskTitle}” đã quá hạn ${daysOverdue} ngày. Bạn đang gặp blocker hay cần điều chỉnh phạm vi hoặc ưu tiên không?`,
-      detail:
-        overdueTasks.length > 1
-          ? `Bạn còn ${overdueTasks.length - 1} task quá hạn khác. Mình đề xuất xử lý task cũ nhất trước.`
-          : "Một cập nhật ngắn về blocker sẽ giúp PM hỗ trợ đúng chỗ.",
-      activeTasks: openTasks.length,
-      task: {
-        id: firstOverdue.task.id,
-        title: taskTitle,
-        dueAt: firstOverdue.dueAt.toISOString(),
-        daysOverdue,
-      },
-    };
+  // STRICT FILTER: Only tasks with status === "rework"
+  const reworkTasks = tasks.filter((task) => task.status === "rework");
+  if (reworkTasks.length === 0) {
+    return null; // Return null so NO bubble appears when there are no rework tasks!
   }
 
-  const workload = buildWorkloadAnalysis(openTasks, now);
-  if (workload.level !== "high") return null;
-
-  const highestPriorityTitles = openTasks
-    .filter((task) => task.priority === "high")
-    .slice(0, 2)
-    .map((task) => shortTitle(task.title));
-  const priorityDetail = highestPriorityTitles.length
-    ? `Ưu tiên cao hiện có: ${highestPriorityTitles.join(", ")}.`
-    : "Hãy chốt một đầu việc quan trọng nhất trước khi nhận thêm task.";
+  const firstRework = reworkTasks[0];
+  const taskTitle = shortTitle(firstRework.title);
+  const remainingDeadline = formatRemainingDeadline(firstRework.due_at);
 
   return {
-    id: [
-      "overload",
-      projectId,
-      userId,
-      workload.score,
-      openTasks
-        .map((task) => task.id)
-        .sort()
-        .join(","),
-    ].join(":"),
-    kind: "overload",
-    severity: workload.score >= 80 ? "critical" : "warning",
-    title: "Nexus muốn kiểm tra tải việc của bạn",
-    message: `Chào ${name}, dữ liệu hiện có cho thấy tải việc ở mức cao: ${workload.activeTasks} task đang mở, ${workload.doingTasks} task đang Doing. Bạn có muốn rà lại ưu tiên hoặc nhờ PM hỗ trợ không?`,
-    detail: priorityDetail,
-    activeTasks: workload.activeTasks,
+    id: ["rework", projectId, userId, firstRework.id].join(":"),
+    kind: "rework",
+    severity: "critical",
+    title: "⚠️ Cảnh báo Task Cần Làm Lại (Rework)",
+    message: `Chào ${name}! Quản trị viên (PM) vừa chuyển task "${taskTitle}" sang cột Rework do chưa đạt yêu cầu.`,
+    detail: `📌 Task: ${taskTitle}\n⏳ Hạn deadline: ${remainingDeadline}`,
+    activeTasks: reworkTasks.length,
+    task: {
+      id: firstRework.id,
+      title: taskTitle,
+      dueAt: firstRework.due_at || new Date().toISOString(),
+      daysOverdue: 0,
+      remainingDeadline,
+    },
   };
 }
