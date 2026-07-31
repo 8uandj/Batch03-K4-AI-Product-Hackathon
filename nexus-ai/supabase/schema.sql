@@ -40,7 +40,7 @@ create table public.project_invites (
     check (role in ('pm', 'member')),
   token text not null unique default encode(gen_random_bytes(24), 'hex'),
   status text not null default 'pending'
-    check (status in ('pending', 'accepted', 'revoked', 'expired')),
+    check (status in ('pending', 'awaiting_approval', 'accepted', 'revoked', 'expired')),
   expires_at timestamp with time zone,
   created_at timestamp with time zone not null default now()
 );

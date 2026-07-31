@@ -1,7 +1,7 @@
 export type TaskStatus = 'todo' | 'doing' | 'done';
 export type ProjectRole = 'pm' | 'member';
 export type ProjectStatus = 'active' | 'archived';
-export type InviteStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
+export type InviteStatus = 'pending' | 'awaiting_approval' | 'accepted' | 'revoked' | 'expired';
 export type ChatRoomType = 'team' | 'bot';
 export type MessageSenderType = 'user' | 'assistant' | 'system';
 export type AiSummaryType = 'project_brief' | 'member_insight' | 'team_health';
@@ -387,6 +387,18 @@ export type Database = {
       accept_project_invite: {
         Args: {
           invite_token: string;
+        };
+        Returns: string;
+      };
+      approve_project_invite: {
+        Args: {
+          invite_id: string;
+        };
+        Returns: string;
+      };
+      reject_project_invite: {
+        Args: {
+          invite_id: string;
         };
         Returns: string;
       };

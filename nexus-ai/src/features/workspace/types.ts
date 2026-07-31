@@ -31,7 +31,8 @@ export interface WorkspaceInvite {
   id: string;
   email: string;
   role: ProjectRole;
-  status: "pending" | "accepted";
+  status: "pending" | "awaiting_approval" | "accepted" | "revoked" | "expired";
+  token: string;
 }
 
 export interface WorkspaceRecommendation {

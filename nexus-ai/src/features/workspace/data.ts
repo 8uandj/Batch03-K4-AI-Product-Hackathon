@@ -46,6 +46,7 @@ type InviteRow = {
   id: string;
   email: string;
   role: "pm" | "member";
+  token: string;
   status: string;
 };
 
@@ -177,7 +178,7 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
       supabase.from("project_members").select("user_id,role").eq("project_id", projectId),
       supabase
         .from("project_invites")
-        .select("id,email,role,status")
+        .select("id,email,role,token,status")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false }),
       supabase
@@ -241,7 +242,10 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
       id: invite.id,
       email: invite.email,
       role: invite.role,
-      status: invite.status === "accepted" ? "accepted" : "pending",
+      token: invite.token,
+      status: ["pending", "awaiting_approval", "accepted", "revoked", "expired"].includes(invite.status)
+        ? (invite.status as WorkspaceInvite["status"])
+        : "pending",
     })),
     recommendations: ((recsResult.data ?? []) as RecommendationRow[]).map((item) => ({
       id: item.id,

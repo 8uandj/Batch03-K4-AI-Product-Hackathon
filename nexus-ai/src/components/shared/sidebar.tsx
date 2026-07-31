@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
   Bot,
   ChevronLeft,
@@ -33,14 +33,34 @@ function getProjectId(pathname: string) {
 
 const STORAGE_KEY = "nexus-sidebar-collapsed";
 
+function subscribeSidebarPreference(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener("nexus-sidebar-change", onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener("nexus-sidebar-change", onStoreChange);
+  };
+}
+
+function getSidebarPreference() {
+  return window.localStorage.getItem(STORAGE_KEY) === "true";
+}
+
+function getServerSidebarPreference() {
+  return false;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const projectId = getProjectId(pathname);
 
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(STORAGE_KEY) === "true";
-  });
+  // Keep the first server/client render identical while still restoring the
+  // user's preference immediately after hydration.
+  const collapsed = useSyncExternalStore(
+    subscribeSidebarPreference,
+    getSidebarPreference,
+    getServerSidebarPreference,
+  );
 
   // Sync --sidebar-w CSS variable so header and main offset correctly
   useEffect(() => {
@@ -57,11 +77,9 @@ export function Sidebar() {
   }, [collapsed]);
 
   const toggleCollapsed = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem(STORAGE_KEY, String(next));
-      return next;
-    });
+    const next = !collapsed;
+    localStorage.setItem(STORAGE_KEY, String(next));
+    window.dispatchEvent(new Event("nexus-sidebar-change"));
   };
 
   const workspaceItems: NavigationItem[] = [

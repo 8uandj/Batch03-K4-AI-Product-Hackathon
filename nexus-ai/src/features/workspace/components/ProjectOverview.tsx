@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 
+import { InviteApprovalActions } from "./InviteApprovalActions";
 import { InviteMemberForm } from "./InviteMemberForm";
 import { ProjectAnalysisForm } from "./ProjectAnalysisForm";
 import { ProjectAiPlanner } from "./ProjectAiPlanner";
@@ -64,6 +65,9 @@ export function ProjectOverview({
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
               {project.description}
+            </p>
+            <p className="mt-3 max-w-3xl text-xs text-slate-500">
+              Project UUID: <code className="break-all rounded bg-slate-100 px-1.5 py-1 font-mono text-[11px] text-slate-700">{project.id}</code>
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -247,13 +251,14 @@ export function ProjectOverview({
                       className="rounded-lg border border-slate-200 p-3 text-sm"
                       key={invite.id}
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-medium text-slate-800">{invite.email}</span>
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                          {invite.status}
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="min-w-0 break-all font-medium text-slate-800">{invite.email}</span>
+                        <span className={`shrink-0 rounded-full px-2 py-1 text-xs ${invite.status === "awaiting_approval" ? "bg-amber-50 text-amber-700" : invite.status === "accepted" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                          {invite.status === "awaiting_approval" ? "Chờ duyệt" : invite.status}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">Role: {invite.role}</p>
+                      <p className="mt-1 break-all text-xs text-slate-500">Role: {invite.role} · /join/{invite.token}</p>
+                      {currentRole === "pm" && invite.status === "awaiting_approval" ? <InviteApprovalActions inviteId={invite.id} projectId={project.id} /> : null}
                     </div>
                   ))}
                 </div>
