@@ -18,7 +18,10 @@ import {
 } from "lucide-react";
 
 import { getCurrentUserProjects } from "@/features/workspace/data";
-import { createClient } from "@/lib/supabase/server";
+import {
+  createClient,
+  isSupabaseConfigured,
+} from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -60,10 +63,9 @@ const workflowSteps = [
 ];
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = isSupabaseConfigured()
+    ? (await (await createClient()).auth.getUser()).data.user
+    : null;
   const projects = user ? await getCurrentUserProjects() : [];
   const firstProjectHref = projects[0] ? `/project/${projects[0].id}` : "/project/demo";
 
@@ -81,7 +83,7 @@ export default async function HomePage() {
               AI-powered project workspace for hackathon teams
             </div>
             <h1 className="mt-6 max-w-4xl text-4xl font-black tracking-tight md:text-5xl lg:text-6xl">
-              Quản lý dự án kiểu Jira, nhưng có AI đồng hành từ tài liệu đến red flag.
+              Quản lý dự án thông minh cùng AI.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300">
               Nexus AI giúp PM tạo project, mời team, nạp knowledge base, chia task, hỏi bot theo tài liệu và theo dõi sức khỏe dự án trong một luồng thống nhất.
