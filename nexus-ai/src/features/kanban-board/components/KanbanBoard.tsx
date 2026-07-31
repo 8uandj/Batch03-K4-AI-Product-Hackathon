@@ -63,6 +63,7 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
   const [showAutoTasking, setShowAutoTasking] = useState(false);
   const [monitoring, setMonitoring] = useState(false);
+  const [refreshingProgress, setRefreshingProgress] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -314,6 +315,54 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
     }
   }
 
+  async function refreshProgress() {
+    if (initialData.dataSource !== "supabase") {
+      setToast({
+        tone: "warning",
+        message: "Demo data không có tiến độ mới để đồng bộ.",
+      });
+      return;
+    }
+
+    setRefreshingProgress(true);
+    setToast(null);
+
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id,status,updated_at")
+        .eq("project_id", initialData.projectId);
+
+      if (error) throw new Error(error.message);
+
+      setTasks((current) =>
+        applyKanbanTaskStatusSnapshot(
+          current,
+          (data ?? []).map((task) => ({
+            id: task.id,
+            status: task.status,
+            updatedAt: task.updated_at,
+          })),
+        ),
+      );
+      setToast({
+        tone: "success",
+        message: "Đã tải tiến độ mới nhất của project.",
+      });
+    } catch (error) {
+      setToast({
+        tone: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Không thể làm mới tiến độ.",
+      });
+    } finally {
+      setRefreshingProgress(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-slate-950 via-indigo-950 to-violet-800 px-6 py-7 text-white shadow-2xl shadow-violet-200/50 sm:px-8">
@@ -466,25 +515,43 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
           </div>
         </div>
 
-        {initialData.canAutoTask && initialData.dataSource === "supabase" ? (
-          <button
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
-            disabled={monitoring}
-            onClick={runDeadlineMonitor}
-            type="button"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={monitoring ? "animate-spin" : ""}
-              size={16}
-            />
-            {monitoring ? "Đang quét…" : "Quét tiến độ hôm nay"}
-          </button>
-        ) : (
-          <span className="text-xs font-semibold text-slate-500">
-            Tự động quét lúc 08:00 hằng ngày
-          </span>
-        )}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {initialData.dataSource === "supabase" ? (
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:text-cyan-700 disabled:cursor-wait disabled:opacity-60"
+              disabled={refreshingProgress}
+              onClick={refreshProgress}
+              type="button"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={refreshingProgress ? "animate-spin" : ""}
+                size={16}
+              />
+              {refreshingProgress ? "Đang làm mới…" : "Làm mới tiến độ"}
+            </button>
+          ) : null}
+
+          {initialData.canAutoTask && initialData.dataSource === "supabase" ? (
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+              disabled={monitoring}
+              onClick={runDeadlineMonitor}
+              type="button"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={monitoring ? "animate-spin" : ""}
+                size={16}
+              />
+              {monitoring ? "Đang quét…" : "Quét tiến độ hôm nay"}
+            </button>
+          ) : (
+            <span className="text-xs font-semibold text-slate-500">
+              Tự động đồng bộ mỗi 15 giây
+            </span>
+          )}
+        </div>
       </section>
 
       {toast ? (
