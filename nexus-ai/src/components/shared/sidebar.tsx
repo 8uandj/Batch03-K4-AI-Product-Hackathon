@@ -50,9 +50,17 @@ function getServerSidebarPreference() {
   return false;
 }
 
-export function Sidebar() {
+export function Sidebar({
+  requiresOnboarding = false,
+}: {
+  requiresOnboarding?: boolean;
+}) {
   const pathname = usePathname();
   const projectId = getProjectId(pathname);
+  const getGuardedHref = (href: string) =>
+    requiresOnboarding
+      ? `/onboarding?next=${encodeURIComponent(href)}`
+      : href;
 
   // Keep the first server/client render identical while still restoring the
   // user's preference immediately after hydration.
@@ -170,7 +178,7 @@ export function Sidebar() {
         >
           <Link
             className="group flex min-w-0 items-center gap-3"
-            href="/"
+            href={getGuardedHref("/")}
             aria-label="Nexus AI"
           >
             <span className="relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-300 transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-cyan-200">
@@ -216,12 +224,14 @@ export function Sidebar() {
             items={workspaceItems}
             label="Workspace"
             collapsed={isCollapsed}
+            getHref={getGuardedHref}
           />
           <NavigationGroup
             className="mt-7"
             items={projectItems}
             label={projectId ? "Project hiện tại" : "Công cụ dự án"}
             collapsed={isCollapsed}
+            getHref={getGuardedHref}
           />
         </div>
 
@@ -235,7 +245,7 @@ export function Sidebar() {
           {/* Profile link */}
           <NavTooltip label="Hồ sơ cá nhân" collapsed={isCollapsed}>
             <Link
-              href="/profile"
+              href={getGuardedHref("/profile")}
               className={cn(
                 "group flex items-center rounded-2xl text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950",
                 isCollapsed
@@ -305,7 +315,7 @@ export function Sidebar() {
                 "flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-bold text-slate-400 transition",
                 item.isActive && "bg-slate-950 text-white shadow-md",
               )}
-              href={item.href}
+              href={getGuardedHref(item.href)}
               key={item.label}
             >
               <Icon size={18} />
@@ -348,11 +358,13 @@ function NavigationGroup({
   items,
   label,
   collapsed,
+  getHref,
 }: {
   className?: string;
   items: NavigationItem[];
   label: string;
   collapsed: boolean;
+  getHref: (href: string) => string;
 }) {
   return (
     <section className={className}>
@@ -378,7 +390,7 @@ function NavigationGroup({
                   item.isActive &&
                     "bg-slate-950 text-white shadow-lg shadow-slate-200 hover:bg-slate-900 hover:text-white",
                 )}
-                href={item.href}
+                href={getHref(item.href)}
               >
                 <span
                   className={cn(
