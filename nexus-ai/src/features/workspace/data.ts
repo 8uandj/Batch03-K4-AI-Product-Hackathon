@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import type { TaskStatus } from "@/types";
+import {
+  buildWorkloadAnalysis,
+  summarizeEqSignal,
+} from "@/features/eq-radar/analysis";
 
 import type {
   WorkspaceInvite,
@@ -28,6 +32,10 @@ type TaskRow = {
   id: string;
   status: string;
   assignee_id: string | null;
+  title: string;
+  priority: string | null;
+  due_at: string | null;
+  updated_at: string | null;
 };
 
 type MemberRow = {
@@ -73,20 +81,10 @@ function isTaskStatus(value: string): value is TaskStatus {
   return TASK_STATUSES.includes(value as TaskStatus);
 }
 
-function summarizeEqSignal(eqAnswers: unknown) {
-  if (!eqAnswers || typeof eqAnswers !== "object") {
-    return "Chưa có dữ liệu EQ/onboarding.";
-  }
-
-  return "Đã có dữ liệu EQ/onboarding để AI dùng khi gợi ý chia việc.";
-}
-
 function calculateWorkload(userId: string, tasks: TaskRow[]) {
-  const assignedOpenTasks = tasks.filter(
-    (task) => task.assignee_id === userId && task.status !== "done",
-  ).length;
-
-  return Math.min(100, assignedOpenTasks * 20);
+  return buildWorkloadAnalysis(
+    tasks.filter((task) => task.assignee_id === userId),
+  ).score;
 }
 
 function countByStatus(tasks: TaskRow[]) {
@@ -170,7 +168,10 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
 
   const [tasksResult, documentsResult, membersResult, invitesResult, recsResult, risksResult] =
     await Promise.all([
-      supabase.from("tasks").select("id,status,assignee_id").eq("project_id", projectId),
+      supabase
+        .from("tasks")
+        .select("id,title,status,priority,due_at,updated_at,assignee_id")
+        .eq("project_id", projectId),
       supabase
         .from("documents")
         .select("id", { count: "exact", head: true })
@@ -219,7 +220,11 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
       name: user?.name || member.user_id.slice(0, 8),
       role: member.role,
       skills: user?.skills ?? [],
-      eqSignal: summarizeEqSignal(user?.eq_answers),
+      eqSignal: summarizeEqSignal(
+        user?.eq_answers && typeof user.eq_answers === "object"
+          ? (user.eq_answers as Record<string, unknown>)
+          : {},
+      ),
       workload: calculateWorkload(member.user_id, tasks),
     };
   });
