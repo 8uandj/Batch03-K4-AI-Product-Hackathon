@@ -1,9 +1,10 @@
 "use client";
 
-import { Bot, Send, UserRound } from "lucide-react";
+import { Bot, FileText, Send, UserRound } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import type { ChatMessage, RagSourceReference } from "../types";
+import { FormattedMessage } from "./FormattedMessage";
 
 type RagChatProps = {
   projectId: string;
@@ -127,19 +128,40 @@ export function RagChat({ projectId, projectName }: RagChatProps) {
                       : "border border-slate-200 bg-white text-slate-800"
                   }`}
                 >
-                  {message.content || "Đang tổng hợp câu trả lời…"}
+                  {isUser ? (
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  ) : message.content ? (
+                    <FormattedMessage content={message.content} />
+                  ) : (
+                    <span className="text-slate-500">
+                      Đang tổng hợp câu trả lời…
+                    </span>
+                  )}
                 </div>
                 {message.sources?.length ? (
-                  <div className="mt-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs leading-5 text-slate-500">
-                    <span className="font-medium text-slate-700">Nguồn: </span>
-                    {message.sources
-                      .map(
-                        (source, index) =>
-                          `[${index + 1}] ${source.filename} · đoạn ${
-                            source.chunkIndex + 1
-                          }`,
-                      )
-                      .join(" · ")}
+                  <div className="mt-2.5 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700">
+                      <FileText aria-hidden="true" size={14} />
+                      Nguồn tham khảo
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {message.sources.map((source, index) => (
+                        <span
+                          className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600"
+                          key={`${source.id}-${source.chunkIndex}`}
+                        >
+                          <span className="font-semibold text-cyan-700">
+                            {index + 1}
+                          </span>
+                          <span className="max-w-52 truncate font-medium text-slate-700">
+                            {source.filename}
+                          </span>
+                          <span className="text-slate-400">
+                            · Đoạn {source.chunkIndex + 1}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 ) : null}
               </div>

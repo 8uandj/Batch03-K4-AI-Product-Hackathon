@@ -56,7 +56,7 @@ type RecommendationRow = {
   title: string;
   target_user_id: string | null;
   rationale: string | null;
-  confidence: number | null;
+  payload: unknown;
 };
 
 type RiskRow = {
@@ -97,6 +97,25 @@ function countByStatus(tasks: TaskRow[]) {
     },
     { todo: 0, doing: 0, done: 0 },
   );
+}
+
+function readRecommendationPayload(payload: unknown) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { confidence: 0, suggestedTasks: [] };
+  }
+
+  const value = payload as Record<string, unknown>;
+  const suggestedTasks = Array.isArray(value.suggested_tasks)
+    ? value.suggested_tasks.filter(
+        (task): task is string => typeof task === "string" && task.trim().length > 0,
+      )
+    : [];
+  const confidence =
+    typeof value.confidence === "number" && Number.isFinite(value.confidence)
+      ? Math.min(100, Math.max(0, Math.round(value.confidence)))
+      : 0;
+
+  return { confidence, suggestedTasks };
 }
 
 export async function getCurrentUserProjects(): Promise<ProjectListItem[]> {
@@ -183,7 +202,7 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
         .order("created_at", { ascending: false }),
       supabase
         .from("ai_recommendations")
-        .select("id,type,title,target_user_id,rationale,confidence")
+        .select("id,type,title,target_user_id,rationale,payload")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
         .limit(5),
@@ -247,14 +266,19 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
         ? (invite.status as WorkspaceInvite["status"])
         : "pending",
     })),
-    recommendations: ((recsResult.data ?? []) as RecommendationRow[]).map((item) => ({
-      id: item.id,
-      type: item.type,
-      title: item.title,
-      member: memberName(item.target_user_id),
-      rationale: item.rationale || "AI chưa ghi lý do chi tiết.",
-      confidence: item.confidence ?? 0,
-    })),
+    recommendations: ((recsResult.data ?? []) as RecommendationRow[]).map((item) => {
+      const payload = readRecommendationPayload(item.payload);
+
+      return {
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        member: memberName(item.target_user_id),
+        rationale: item.rationale || "AI chưa ghi lý do chi tiết.",
+        confidence: payload.confidence,
+        suggestedTasks: payload.suggestedTasks,
+      };
+    }),
     risks: ((risksResult.data ?? []) as RiskRow[]).map((risk) => ({
       id: risk.id,
       type: risk.type,
