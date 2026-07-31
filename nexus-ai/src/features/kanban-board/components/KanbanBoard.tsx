@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -30,11 +30,16 @@ import {
 
 import type { TaskStatus } from "@/types";
 import { getOverdueHours } from "@/features/deadline-monitor/rules";
+import { createClient } from "@/lib/supabase/client";
 
 import {
   filterKanbanTasksByScope,
   type KanbanBoardScope,
 } from "../scope";
+import {
+  applyKanbanTaskStatusSnapshot,
+  applyKanbanTaskStatusUpdate,
+} from "../sync";
 import type { KanbanBoardData, KanbanTask } from "../types";
 import { AutoTaskingDialog } from "./AutoTaskingDialog";
 import { KanbanColumn } from "./KanbanColumn";
@@ -47,9 +52,14 @@ type ToastState = {
   message: string;
 };
 
+type LiveSyncStatus = "connecting" | "live" | "offline";
+
 export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
   const [tasks, setTasks] = useState(initialData.tasks);
   const [boardScope, setBoardScope] = useState<KanbanBoardScope>("team");
+  const [liveSyncStatus, setLiveSyncStatus] = useState<LiveSyncStatus>(
+    initialData.dataSource === "supabase" ? "connecting" : "offline",
+  );
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
   const [showAutoTasking, setShowAutoTasking] = useState(false);
   const [monitoring, setMonitoring] = useState(false);
@@ -58,6 +68,97 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
   );
+
+  useEffect(() => {
+    if (initialData.dataSource !== "supabase") return;
+
+    let disposed = false;
+    const supabase = createClient();
+
+    async function reconcileTaskStatuses() {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id,status,updated_at")
+        .eq("project_id", initialData.projectId);
+
+      if (disposed) return;
+      if (error) {
+        setLiveSyncStatus("offline");
+        return;
+      }
+
+      setTasks((current) =>
+        applyKanbanTaskStatusSnapshot(
+          current,
+          (data ?? []).map((task) => ({
+            id: task.id,
+            status: task.status,
+            updatedAt: task.updated_at,
+          })),
+        ),
+      );
+    }
+
+    const channel = supabase
+      .channel(`kanban-tasks:${initialData.projectId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "tasks",
+          filter: `project_id=eq.${initialData.projectId}`,
+        },
+        (payload) => {
+          const row = payload.new as {
+            id?: unknown;
+            status?: unknown;
+            updated_at?: unknown;
+          };
+          const taskId = typeof row.id === "string" ? row.id : null;
+
+          if (!taskId) return;
+
+          setTasks((current) =>
+            applyKanbanTaskStatusUpdate(current, {
+              id: taskId,
+              status: row.status,
+              updatedAt:
+                typeof row.updated_at === "string"
+                  ? row.updated_at
+                  : undefined,
+            }),
+          );
+        },
+      )
+      .subscribe((status) => {
+        if (disposed) return;
+
+        if (status === "SUBSCRIBED") {
+          setLiveSyncStatus("live");
+          void reconcileTaskStatuses();
+          return;
+        }
+
+        if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
+          setLiveSyncStatus("offline");
+        }
+      });
+    void reconcileTaskStatuses();
+    const pollingInterval = window.setInterval(() => {
+      void reconcileTaskStatuses();
+    }, 15_000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(pollingInterval);
+      void supabase.removeChannel(channel);
+    };
+  }, [initialData.dataSource, initialData.projectId]);
 
   const visibleTasks = useMemo(
     () =>
@@ -225,8 +326,25 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
               <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200 ring-1 ring-white/15">
                 Workflow command center
               </span>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold text-white/70 ring-1 ring-white/15">
-                {initialData.dataSource === "mock" ? "Demo data" : "Supabase live"}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold text-white/70 ring-1 ring-white/15">
+                <span
+                  className={`size-1.5 rounded-full ${
+                    initialData.dataSource === "mock"
+                      ? "bg-slate-300"
+                      : liveSyncStatus === "live"
+                        ? "bg-emerald-300 shadow-[0_0_0_3px_rgba(110,231,183,0.15)]"
+                        : liveSyncStatus === "connecting"
+                          ? "animate-pulse bg-amber-300"
+                          : "bg-rose-300"
+                  }`}
+                />
+                {initialData.dataSource === "mock"
+                  ? "Demo data"
+                  : liveSyncStatus === "live"
+                    ? "Live sync"
+                    : liveSyncStatus === "connecting"
+                      ? "Đang kết nối"
+                      : "Mất đồng bộ"}
               </span>
             </div>
             <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
