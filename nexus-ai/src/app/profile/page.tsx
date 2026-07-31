@@ -6,7 +6,7 @@ import { getProfilePageData } from "@/features/profile/data";
 
 export const dynamic = "force-dynamic";
 
-function EqSummaryDisplay({ eqSummary }: { eqSummary: Record<string, any> | string | null | undefined }) {
+function EqSummaryDisplay({ eqSummary }: { eqSummary: Record<string, unknown> | string | null | undefined }) {
   if (!eqSummary || (typeof eqSummary === "object" && Object.keys(eqSummary).length === 0)) {
     return (
       <p className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs text-slate-500">
@@ -15,10 +15,10 @@ function EqSummaryDisplay({ eqSummary }: { eqSummary: Record<string, any> | stri
     );
   }
 
-  let eqObj: Record<string, any> = {};
+  let eqObj: Record<string, unknown> = {};
   if (typeof eqSummary === "string") {
     try {
-      eqObj = JSON.parse(eqSummary);
+      eqObj = JSON.parse(eqSummary) as Record<string, unknown>;
     } catch {
       return (
         <div className="mt-3 rounded-2xl bg-slate-50 p-4 text-xs leading-6 text-slate-700 border border-slate-200">
@@ -27,7 +27,7 @@ function EqSummaryDisplay({ eqSummary }: { eqSummary: Record<string, any> | stri
       );
     }
   } else {
-    eqObj = eqSummary;
+    eqObj = eqSummary as Record<string, unknown>;
   }
 
   const items = [
@@ -150,7 +150,7 @@ export default async function ProfilePage() {
               <BrainCircuit className="text-violet-600" size={18} />
               <h2 className="font-bold text-slate-950">EQ summary</h2>
             </div>
-            <EqSummaryDisplay eqSummary={profile.eq_summary as any} />
+            <EqSummaryDisplay eqSummary={profile.eq_summary as Record<string, unknown> | string | null | undefined} />
           </div>
         </aside>
         <ProfileForm profile={profile} />
