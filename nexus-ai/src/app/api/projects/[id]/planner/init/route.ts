@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import OpenAI from "openai";
+import { createMockKanbanData } from "@/features/kanban-board/mock-data";
 import { requireProjectAccess } from "@/features/workspace/access";
 import type { TaskPriority } from "@/types";
 
@@ -97,8 +98,22 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
+    const supabase = access.supabase;
+    if (!supabase) {
+      const mockData = createMockKanbanData();
+      const deadlineDays = 14;
+      const tasks = createMockDrafts(mockData.members, deadlineDays);
+
+      return Response.json({
+        recommendationId: randomUUID(),
+        tasks,
+        mode: "mock",
+        deadlineDays,
+      });
+    }
+
     // 1. Fetch project details and members
-    const { data: projectRow, error: projectError } = await access.supabase
+    const { data: projectRow, error: projectError } = await supabase
       .from("projects")
       .select("id,name,description,deadline_at")
       .eq("id", projectId)
@@ -108,14 +123,14 @@ export async function POST(request: Request, { params }: RouteContext) {
       return Response.json({ error: "Không tìm thấy dự án." }, { status: 404 });
     }
 
-    const { data: membershipRows, error: memberError } = await access.supabase
+    const { data: membershipRows, error: memberError } = await supabase
       .from("project_members")
       .select("user_id")
       .eq("project_id", projectId);
     if (memberError) throw new Error(memberError.message);
 
     const memberIds = (membershipRows ?? []).map((m) => m.user_id);
-    const { data: userRows, error: userError } = await access.supabase
+    const { data: userRows, error: userError } = await supabase
       .from("users")
       .select("id,name,email,skills")
       .in("id", memberIds);
@@ -135,7 +150,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     // 2. Fetch document summary context
-    const { data: summaryRow } = await access.supabase
+    const { data: summaryRow } = await supabase
       .from("ai_summaries")
       .select("content")
       .eq("project_id", projectId)
@@ -245,14 +260,14 @@ export async function POST(request: Request, { params }: RouteContext) {
     let recommendationId = randomUUID();
     if (projectId !== "demo") {
       // Clear any existing active planners
-      await access.supabase
+      await supabase
         .from("ai_recommendations")
         .delete()
         .eq("project_id", projectId)
         .eq("type", "task_assignment")
         .eq("status", "suggested");
 
-      const { data: recData, error: recError } = await access.supabase
+      const { data: recData, error: recError } = await supabase
         .from("ai_recommendations")
         .insert({
           project_id: projectId,

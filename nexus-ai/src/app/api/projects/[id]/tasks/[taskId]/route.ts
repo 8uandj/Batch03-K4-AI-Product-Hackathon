@@ -28,6 +28,10 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     }
 
     const { supabase } = await requireProjectAccess(projectId);
+    if (!supabase) {
+      throw new Error("Không thể kết nối dữ liệu project.");
+    }
+
     const updatedAt = new Date().toISOString();
     const { data, error } = await supabase
       .from("tasks")

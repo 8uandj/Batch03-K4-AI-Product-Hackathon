@@ -73,9 +73,14 @@ export async function POST(request: Request, { params }: RouteContext) {
       return Response.json({ ...mockResult, mode: "mock" });
     }
 
+    const supabase = access.supabase;
+    if (!supabase) {
+      throw new Error("Không thể kết nối dữ liệu project.");
+    }
+
     // 2. Fetch live database data
     // Fetch member details
-    const { data: userRow, error: userError } = await access.supabase
+    const { data: userRow, error: userError } = await supabase
       .from("users")
       .select("id,name,email,skills,eq_answers,eq_summary")
       .eq("id", memberId)
@@ -89,7 +94,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     const name = user.name || user.email?.split("@")[0] || user.id.slice(0, 8);
 
     // Fetch active tasks for this member
-    const { data: taskRows } = await access.supabase
+    const { data: taskRows } = await supabase
       .from("tasks")
       .select("title,status,priority")
       .eq("project_id", projectId)

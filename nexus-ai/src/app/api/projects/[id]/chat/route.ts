@@ -15,18 +15,22 @@ export async function POST(request: Request, { params }: RouteContext) {
   try {
     const { id: projectId } = await params;
     const { supabase } = await requireProjectAccess(projectId);
-    const projectName =
-      projectId === "demo"
-        ? "Demo project"
-        : (
-            (
-              await supabase
-                .from("projects")
-                .select("name")
-                .eq("id", projectId)
-                .maybeSingle()
-            ).data?.name ?? "Project"
-          );
+    let projectName = "Demo project";
+
+    if (projectId !== "demo") {
+      if (!supabase) {
+        throw new Error("Không thể kết nối dữ liệu project.");
+      }
+
+      projectName =
+        (
+          await supabase
+            .from("projects")
+            .select("name")
+            .eq("id", projectId)
+            .maybeSingle()
+        ).data?.name ?? "Project";
+    }
 
     const body = (await request.json()) as {
       message?: string;

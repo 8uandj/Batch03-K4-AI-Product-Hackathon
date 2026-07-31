@@ -20,7 +20,12 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       return Response.json({ success: true, mode: "mock" });
     }
 
-    const { error } = await access.supabase
+    const supabase = access.supabase;
+    if (!supabase) {
+      throw new Error("Không thể kết nối dữ liệu project.");
+    }
+
+    const { error } = await supabase
       .from("projects")
       .update({ deadline_at: deadlineAt, updated_at: new Date().toISOString() })
       .eq("id", projectId);

@@ -420,14 +420,19 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    const { data: membershipRows, error: memberError } = await access.supabase
+    const supabase = access.supabase;
+    if (!supabase) {
+      throw new Error("Không thể kết nối dữ liệu project.");
+    }
+
+    const { data: membershipRows, error: memberError } = await supabase
       .from("project_members")
       .select("user_id")
       .eq("project_id", projectId);
     if (memberError) throw new Error(memberError.message);
 
     const memberIds = (membershipRows ?? []).map((member) => member.user_id);
-    const { data: userRows, error: userError } = await access.supabase
+    const { data: userRows, error: userError } = await supabase
       .from("users")
       .select("id,name,email,avatar_url,skills")
       .in("id", memberIds);
@@ -457,7 +462,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       required_skills: task.required_skills,
       due_at: dueDate(task.due_in_days),
     }));
-    const { data: inserted, error: insertError } = await access.supabase
+    const { data: inserted, error: insertError } = await supabase
       .from("tasks")
       .insert(rows)
       .select(

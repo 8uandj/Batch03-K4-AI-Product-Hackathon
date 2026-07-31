@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { createMockKanbanData } from "@/features/kanban-board/mock-data";
 import { requireProjectAccess } from "@/features/workspace/access";
 import type { TaskPriority } from "@/types";
 
@@ -97,35 +98,45 @@ export async function POST(request: Request, { params }: RouteContext) {
       return Response.json({ error: "Nội dung phản hồi không được để trống." }, { status: 400 });
     }
 
-    // 1. Fetch project details and members
-    const { data: projectRow } = await access.supabase
-      .from("projects")
-      .select("id,name,deadline_at")
-      .eq("id", projectId)
-      .maybeSingle();
-
-    const { data: membershipRows } = await access.supabase
-      .from("project_members")
-      .select("user_id")
-      .eq("project_id", projectId);
-
-    const memberIds = (membershipRows ?? []).map((m) => m.user_id);
-    const { data: userRows } = await access.supabase
-      .from("users")
-      .select("id,name,email,skills")
-      .in("id", memberIds);
-
-    const members = ((userRows ?? []) as UserRow[]).map((user) => ({
-      id: user.id,
-      name: user.name || user.email?.split("@")[0] || user.id.slice(0, 8),
-      skills: user.skills ?? [],
-    }));
-
-    // Calculate deadline days limit
+    // 1. Fetch project details and members, or use the shared demo dataset.
+    const supabase = access.supabase;
+    let members: MemberInfo[];
     let deadlineDays = 14;
-    if (projectRow?.deadline_at) {
-      const diffTime = new Date(projectRow.deadline_at).getTime() - new Date().getTime();
-      deadlineDays = Math.max(2, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+    if (!supabase) {
+      members = createMockKanbanData().members;
+    } else {
+      const { data: projectRow } = await supabase
+        .from("projects")
+        .select("id,name,deadline_at")
+        .eq("id", projectId)
+        .maybeSingle();
+
+      const { data: membershipRows } = await supabase
+        .from("project_members")
+        .select("user_id")
+        .eq("project_id", projectId);
+
+      const memberIds = (membershipRows ?? []).map((m) => m.user_id);
+      const { data: userRows } = await supabase
+        .from("users")
+        .select("id,name,email,skills")
+        .in("id", memberIds);
+
+      members = ((userRows ?? []) as UserRow[]).map((user) => ({
+        id: user.id,
+        name: user.name || user.email?.split("@")[0] || user.id.slice(0, 8),
+        skills: user.skills ?? [],
+      }));
+
+      if (projectRow?.deadline_at) {
+        const diffTime =
+          new Date(projectRow.deadline_at).getTime() - new Date().getTime();
+        deadlineDays = Math.max(
+          2,
+          Math.ceil(diffTime / (1000 * 60 * 60 * 24)),
+        );
+      }
     }
 
     let resultMessage = "";
@@ -223,8 +234,8 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     // 4. Update the stored recommendation payload
-    if (projectId !== "demo" && body.recommendationId) {
-      await access.supabase
+    if (supabase && body.recommendationId) {
+      await supabase
         .from("ai_recommendations")
         .update({
           payload: { tasks: updatedTasks, mode: processed ? "openai" : "mock", deadlineDays },

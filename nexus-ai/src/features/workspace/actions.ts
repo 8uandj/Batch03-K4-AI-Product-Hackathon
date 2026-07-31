@@ -162,6 +162,10 @@ export async function updateProjectDeadline(
       return { success: true };
     }
 
+    if (!supabase) {
+      return { error: "Không thể kết nối dữ liệu project." };
+    }
+
     const { error: updateError } = await supabase
       .from("projects")
       .update({ deadline_at: deadlineAt, updated_at: new Date().toISOString() })

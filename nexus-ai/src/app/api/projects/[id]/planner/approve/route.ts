@@ -46,6 +46,11 @@ export async function POST(request: Request, { params }: RouteContext) {
       return Response.json({ success: true, count: finalTasks.length });
     }
 
+    const supabase = access.supabase;
+    if (!supabase) {
+      throw new Error("Không thể kết nối dữ liệu project.");
+    }
+
     // Map tasks to database schema
     const taskRows = finalTasks.map((task) => ({
       project_id: projectId,
@@ -59,7 +64,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     }));
 
     // Insert tasks in database
-    const { error: insertError } = await access.supabase
+    const { error: insertError } = await supabase
       .from("tasks")
       .insert(taskRows);
 
@@ -67,7 +72,7 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     // Update recommendation status to accepted
     if (body.recommendationId) {
-      await access.supabase
+      await supabase
         .from("ai_recommendations")
         .update({ status: "accepted" })
         .eq("id", body.recommendationId);
