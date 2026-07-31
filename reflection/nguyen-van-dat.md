@@ -1,6 +1,6 @@
-# Reflection — Trần Văn Ngọc
+# Reflection — Nguyễn Văn Đạt
 
-- **Mã HV:** 2A202601512
+- **Mã HV:** 2A202601968
 - **Vai trò:** Knowledge Hub/RAG và kiểm tra grounding
 
 ## Phần tôi trực tiếp phụ trách

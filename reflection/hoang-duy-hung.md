@@ -1,6 +1,6 @@
-# Reflection — Nguyễn Hoàng Bảo Minh
+# Reflection — Hoàng Duy Hưng
 
-- **Mã HV:** 2A202601626
+- **Mã HV:** 2A202601908
 - **Vai trò:** PM, spec, evidence, hạ tầng và tích hợp
 
 ## Phần tôi trực tiếp phụ trách

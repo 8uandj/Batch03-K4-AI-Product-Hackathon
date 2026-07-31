@@ -1,6 +1,6 @@
-# Reflection — Hồ Văn Tâm
+# Reflection - Đặng Hữu Khanh
 
-- **Mã HV:** 2A202601542
+- **Mã HV:** 2A202601104
 - **Vai trò:** EQ Radar, analytics và safety cases
 
 ## Phần tôi trực tiếp phụ trách

@@ -217,11 +217,11 @@ Quality bar này trùng với `eval/golden_set.json` và `eval/README.md`; phả
 
 | Thành viên | Vai trò | Nhiệm vụ chính | Phạm vi code |
 |---|---|---|---|
-| **Nguyễn Quý Dương** · `2A202601642` | DEV 1 — Kỹ sư Onboarding & Dữ liệu đầu vào | Xây dựng luồng onboarding; thu thập CV, kỹ năng và câu trả lời EQ; chuẩn hoá dữ liệu đầu vào của thành viên | `features/onboarding`: giao diện upload CV/EQ, API đọc PDF và trích xuất skills, lưu profile vào `users`, mock skills |
-| **Trần Văn Ngọc** · `2A202601512` | DEV 2 — Kỹ sư AI RAG & Quản trị tri thức | Xử lý tài liệu dự án thành dữ liệu có thể tìm kiếm và xây Bot Chat trả lời theo nguồn | `features/rag-chat` / `features/document-rag`: upload tài liệu, chunk/embedding, pgvector search, RAG prompt, giao diện chat và mock context |
-| **Hoàng Công Thành** · `2A202601662` | DEV 3 — Kỹ sư Workflow & Automation | Chuyển project brief và hồ sơ thành viên thành task; xây Kanban và luồng cập nhật trạng thái | `features/kanban`: Kanban To-do/Doing/Done, kéo thả, AI Auto-Tasking, API tạo/cập nhật task và mock task |
-| **Hồ Văn Tâm** · `2A202601542` | DEV 4 — Kỹ sư EQ Radar & Analytics | Phân tích tiến độ và tải việc; hiển thị dashboard, Red Flag và các safeguard tránh suy diễn về thành viên | `features/dashboard` / `features/eq-radar`: progress, task Doing quá 48 giờ, cảnh báo trễ/quá tải và mock analytics |
-| **Nguyễn Hoàng Bảo Minh** · `2A202601626` | DEV 5 — Project Manager & Hạ tầng | Chốt phạm vi, điều phối nhóm, thiết kế database/type contract, quản lý Git và tích hợp các feature | root, `src/types`, `supabase`: schema, pgvector, TypeScript interfaces, cấu trúc dự án, DevOps, review và merge |
+| **Sẻ Thế Hưng** · `2A202601822` | DEV 1 — Kỹ sư Onboarding & Dữ liệu đầu vào | Xây dựng luồng onboarding; thu thập CV, kỹ năng và câu trả lời EQ; chuẩn hoá dữ liệu đầu vào của thành viên | `features/onboarding`: giao diện upload CV/EQ, API đọc PDF và trích xuất skills, lưu profile vào `users`, mock skills |
+| **Nguyễn Văn Đạt** · `2A202601968` | DEV 2 — Kỹ sư AI RAG & Quản trị tri thức | Xử lý tài liệu dự án thành dữ liệu có thể tìm kiếm và xây Bot Chat trả lời theo nguồn | `features/rag-chat` / `features/document-rag`: upload tài liệu, chunk/embedding, pgvector search, RAG prompt, giao diện chat và mock context |
+| **Nguyễn Đặng Thành Vinh** · `2A202602021` | DEV 3 — Kỹ sư Workflow & Automation | Chuyển project brief và hồ sơ thành viên thành task; xây Kanban và luồng cập nhật trạng thái | `features/kanban`: Kanban To-do/Doing/Done, kéo thả, AI Auto-Tasking, API tạo/cập nhật task và mock task |
+| **Đặng Hữu Khanh** · `2A202601104` | DEV 4 — Kỹ sư EQ Radar & Analytics | Phân tích tiến độ và tải việc; hiển thị dashboard, Red Flag và các safeguard tránh suy diễn về thành viên | `features/dashboard` / `features/eq-radar`: progress, task Doing quá 48 giờ, cảnh báo trễ/quá tải và mock analytics |
+| **Hoàng Duy Hưng** · `2A202601908` | DEV 5 — Project Manager & Hạ tầng | Chốt phạm vi, điều phối nhóm, thiết kế database/type contract, quản lý Git và tích hợp các feature | root, `src/types`, `supabase`: schema, pgvector, TypeScript interfaces, cấu trúc dự án, DevOps, review và merge |
 
 ### Phân công theo deliverable
 
@@ -234,9 +234,9 @@ Quality bar này trùng với `eval/golden_set.json` và `eval/README.md`; phả
 ### Willing users & validation CP5
 
 - **TODO bắt buộc:** điền ≥3 tên người thật ngoài nhóm đã đồng ý thử từ CP1:
-  1. `[Tên 1 — vai trò/lớp — đã đồng ý lúc ...]`
-  2. `[Tên 2 — vai trò/lớp — đã đồng ý lúc ...]`
-  3. `[Tên 3 — vai trò/lớp — đã đồng ý lúc ...]`
+  1. `[Nguyễn Quốc Bảo — vai trò/lớp — đã đồng ý lúc 11h39]`
+  2. `[Lê Trí Tùng — vai trò/lớp — đã đồng ý lúc 12h01]`
+  3. `[Lê Tuấn Minh — vai trò/lớp — đã đồng ý lúc 12h25]`
 - Mục tiêu validation cuối: ≥5 người ngoài nhóm, có ≥2 willing users đã khai từ CP1.
 - Task giao cho người thử: “Từ đoạn chat/project brief này, hãy dùng Nexus để tạo và duyệt các task mà bạn sẵn sàng giao cho team.”
 - Ba câu hỏi cố định:

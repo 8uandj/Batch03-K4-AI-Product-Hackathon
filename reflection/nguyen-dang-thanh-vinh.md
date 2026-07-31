@@ -1,6 +1,6 @@
-# Reflection — Hoàng Công Thành
+# Reflection — Nguyễn Đặng Thành Vinh
 
-- **Mã HV:** 2A202601662
+- **Mã HV:** 2A202602021
 - **Vai trò:** Auto-Tasking, Kanban, prompt và eval
 
 ## Phần tôi trực tiếp phụ trách
