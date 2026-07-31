@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireProjectAccess } from "@/features/workspace/access";
+import { buildPlannerDocumentContext } from "@/features/workspace/planner-validation";
 import type { TaskPriority, TaskStatus } from "@/types";
 import type { KanbanBoardData, KanbanMember, KanbanTask } from "./types";
 
@@ -43,7 +44,13 @@ export async function getKanbanBoardData(
   const access = await requireProjectAccess(projectId);
   const supabase = await createClient();
 
-  const [projectResult, taskResult, memberResult, summaryResult] = await Promise.all([
+  const [
+    projectResult,
+    taskResult,
+    memberResult,
+    summaryResult,
+    documentsResult,
+  ] = await Promise.all([
     supabase
       .from("projects")
       .select("id,name,description")
@@ -68,11 +75,19 @@ export async function getKanbanBoardData(
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("documents")
+      .select("filename,content")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: true })
+      .limit(30),
   ]);
 
   if (projectResult.error || !projectResult.data) return null;
   if (taskResult.error) throw new Error(taskResult.error.message);
   if (memberResult.error) throw new Error(memberResult.error.message);
+  if (summaryResult.error) throw new Error(summaryResult.error.message);
+  if (documentsResult.error) throw new Error(documentsResult.error.message);
 
   const memberIds = ((memberResult.data ?? []) as MemberRow[]).map(
     (member) => member.user_id,
@@ -116,10 +131,12 @@ export async function getKanbanBoardData(
   return {
     projectId,
     projectName: project.name,
-    documentSummary:
-      summaryResult.data?.content ||
+    documentSummary: buildPlannerDocumentContext(
+      summaryResult.data?.content,
+      documentsResult.data ?? [],
       project.description ||
-      "Chưa có project brief. Hãy mô tả mục tiêu và đầu ra mong muốn trước khi chạy Auto-Tasking.",
+        "Chưa có project brief. Hãy mô tả mục tiêu và đầu ra mong muốn trước khi chạy Auto-Tasking.",
+    ),
     tasks,
     members,
     canAutoTask: access.role === "pm",
