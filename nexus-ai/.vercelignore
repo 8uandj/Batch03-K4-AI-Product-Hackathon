@@ -1,0 +1,14 @@
+# Local-only files
+.env
+.env.*
+!.env.example
+.venv/
+
+# Build and dependency outputs
+.next/
+out/
+node_modules/
+
+# Local docs/assets that should not affect deployments
+*.log
+.DS_Store

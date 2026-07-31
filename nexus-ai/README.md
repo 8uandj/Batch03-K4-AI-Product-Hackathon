@@ -8,7 +8,8 @@ Giá trị cốt lõi của Nexus AI là kết hợp IQ và EQ trong quản lý 
 
 - Onboarding đa tầng: thu thập profile/CV, kỹ năng và câu trả lời EQ để AI hiểu năng lực/tính cách từng thành viên.
 - Nexus Knowledge Hub: upload tài liệu, tạo embedding, hỏi đáp RAG theo ngữ cảnh dự án.
-- Kanban Board: quản lý task theo trạng thái `todo`, `doing`, `done`, hỗ trợ kéo thả.
+- Kanban Board: quản lý task theo trạng thái `todo`, `doing`, `done`, kéo thả
+  bằng dnd-kit và AI Auto-Tasking có structured output.
 - PM Dashboard: thống kê tiến độ Done/Total và hiển thị Red Flag khi task `doing` quá 48 giờ.
 - EQ Radar: theo dõi dấu hiệu trễ deadline/quá tải, làm nền tảng cho trợ lý nhắc nhở và coaching 1-1.
 

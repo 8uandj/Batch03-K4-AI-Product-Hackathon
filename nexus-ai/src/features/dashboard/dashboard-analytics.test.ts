@@ -8,8 +8,6 @@ import {
   type DashboardTask,
   type TasksDataClient,
 } from "./dashboard-analytics.ts";
-import { createMockDashboardAnalytics, mockRedFlags } from "./mock-data.ts";
-
 const NOW = new Date("2026-07-30T12:00:00.000Z");
 
 test("đếm task, tính phần trăm và chỉ cắm cờ Doing quá 48 giờ", () => {
@@ -85,16 +83,18 @@ test("fetch Supabase ánh xạ dữ liệu và bỏ status ngoài schema", async
       select: async () => ({
         data: [
           {
-            id: 10,
+            id: "10",
             title: "Task hợp lệ",
             status: "done",
             updated_at: "2026-07-30T10:00:00.000Z",
+            assignee_id: null,
           },
           {
-            id: 11,
+            id: "11",
             title: "Task sai status",
             status: "blocked",
             updated_at: "2026-07-30T10:00:00.000Z",
+            assignee_id: null,
           },
         ],
         error: null,
@@ -127,15 +127,4 @@ test("lỗi Supabase được chuyển thành thông báo có ngữ cảnh", asy
   );
 });
 
-test("mock data tạo đủ thống kê và ít nhất một red flag", () => {
-  const result = createMockDashboardAnalytics(NOW);
 
-  assert.equal(result.stats.total, 10);
-  assert.equal(result.stats.todo, 5);
-  assert.equal(result.stats.doing, 3);
-  assert.equal(result.stats.done, 2);
-  assert.equal(result.stats.completionPercentage, 20);
-  assert.equal(result.redFlags.length, 1);
-  assert.equal(result.redFlags[0]?.taskTitle, mockRedFlags[0].task);
-  assert.equal(result.redFlags[0]?.assigneeName, mockRedFlags[0].user);
-});

@@ -44,8 +44,11 @@ export interface AnalyticsOptions {
 
 type SupabaseTaskRow = Pick<
   Task,
-  "id" | "title" | "status" | "updated_at" | "assignee_id"
->;
+  "id" | "title" | "updated_at"
+> & {
+  status: string;
+  assignee_id: string | null;
+};
 
 interface SupabaseQueryError {
   message: string;
