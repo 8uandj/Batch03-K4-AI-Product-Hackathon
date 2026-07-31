@@ -1,20 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   AlertTriangle,
   BarChart3,
   CalendarClock,
-  CheckCircle2,
   Clock3,
   FolderKanban,
-  KanbanSquare,
-  ListTodo,
-  Plus,
   Radar,
-  ShieldCheck,
-  Sparkles,
   User,
   UsersRound,
 } from "lucide-react";
@@ -264,7 +257,6 @@ function PMDashboard({ data }: { data: Extract<RoleDashboardData, { mode: "pm" }
           <TaskList
             empty="Chưa có red flag nào. Team đang duy trì đúng tiến độ!"
             tasks={data.redFlags}
-            variant="risk"
           />
         </div>
 
@@ -343,7 +335,6 @@ function MemberDashboard({ data }: { data: Extract<RoleDashboardData, { mode: "m
           <TaskList
             empty="Bạn hiện không có task nào sắp đến hạn."
             tasks={data.upcomingTasks}
-            variant="upcoming"
           />
         </div>
 
@@ -358,7 +349,6 @@ function MemberDashboard({ data }: { data: Extract<RoleDashboardData, { mode: "m
           <TaskList
             empty="Tuyệt vời! Bạn không có task nào bị trễ hạn."
             tasks={[...data.overdueTasks, ...data.doingTooLongTasks]}
-            variant="risk"
           />
         </div>
       </div>
@@ -386,9 +376,10 @@ function DashboardHeader({
 
 function StatsGrid({ stats }: { stats: DashboardStats }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
       <StatCard label="Task Cần Làm (Todo)" tone="slate" value={stats.todo} />
       <StatCard label="Đang Thực Hiện (Doing)" tone="indigo" value={stats.doing} />
+      <StatCard label="Cần Làm Lại (Rework)" tone="rose" value={stats.rework} />
       <StatCard label="Đã Hoàn Thành (Done)" tone="emerald" value={stats.done} />
       <StatCard label="Tiến Độ Hoàn Thành" tone="cyan" value={`${stats.completionPercentage}%`} />
     </div>
@@ -401,12 +392,14 @@ function StatCard({
   value,
 }: {
   label: string;
-  tone: "slate" | "indigo" | "emerald" | "cyan";
+  tone: "slate" | "indigo" | "rose" | "emerald" | "cyan";
   value: number | string;
 }) {
   const toneClass =
     tone === "indigo"
       ? "text-indigo-600 bg-indigo-50 border-indigo-100"
+      : tone === "rose"
+        ? "text-rose-600 bg-rose-50 border-rose-100"
       : tone === "emerald"
         ? "text-emerald-600 bg-emerald-50 border-emerald-100"
         : tone === "cyan"
@@ -456,11 +449,9 @@ function SectionHeader({
 function TaskList({
   empty,
   tasks,
-  variant,
 }: {
   empty: string;
   tasks: DashboardTaskItem[];
-  variant: "risk" | "upcoming";
 }) {
   if (!tasks.length) return <div className="p-5"><EmptyBlock text={empty} /></div>;
 
@@ -480,9 +471,11 @@ function TaskList({
             className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shrink-0 ${
               task.status === "doing"
                 ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                : task.status === "done"
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  : "bg-slate-100 text-slate-700 border border-slate-200"
+                : task.status === "rework"
+                  ? "bg-rose-50 text-rose-700 border border-rose-200"
+                  : task.status === "done"
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : "bg-slate-100 text-slate-700 border border-slate-200"
             }`}
           >
             {task.status}

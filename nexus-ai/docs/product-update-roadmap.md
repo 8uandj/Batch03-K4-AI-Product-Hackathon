@@ -73,7 +73,7 @@ Muc tieu: mo rong schema hien co thanh contract du de cac feature lam song song 
 
 - `users`: ho so thanh vien, skills, eq_answers.
 - `documents`: noi dung tai lieu, embedding pgvector.
-- `tasks`: task Kanban voi status `todo | doing | done`.
+- `tasks`: task Kanban voi status `todo | doing | rework | done`.
 - `match_documents`: RPC search tai lieu bang vector.
 
 ### 4.2 Bang can thiet ke tiep theo
@@ -173,7 +173,7 @@ Pham vi san pham:
 
 - AI doc project brief + member profile de goi y chia task.
 - PM accept/edit goi y thanh task Kanban.
-- Thanh vien keo tha task giua `todo`, `doing`, `done`.
+- Thanh vien keo tha task giua `todo`, `doing`, `done`; chi PM duoc thao tac voi `rework`.
 - Task co assignee, due date, priority.
 
 Acceptance criteria:
@@ -218,7 +218,7 @@ Pham vi san pham:
 Da co trong repo:
 
 - Dashboard UI MVP.
-- Logic stats theo `todo | doing | done`.
+- Logic stats theo `todo | doing | rework | done`.
 - Logic Red Flag task `doing` qua 48 gio.
 - Mock data cho demo.
 - Supabase live fetch tu bang `tasks`.

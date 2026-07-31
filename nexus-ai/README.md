@@ -8,7 +8,7 @@ Giá trị cốt lõi của Nexus AI là kết hợp IQ và EQ trong quản lý 
 
 - Onboarding đa tầng: thu thập profile/CV, kỹ năng và câu trả lời EQ để AI hiểu năng lực/tính cách từng thành viên.
 - Nexus Knowledge Hub: upload tài liệu, tạo embedding, hỏi đáp RAG theo ngữ cảnh dự án.
-- Kanban Board: quản lý task theo trạng thái `todo`, `doing`, `done`, kéo thả
+- Kanban Board: quản lý task theo trạng thái `todo`, `doing`, `done`, `rework`; chỉ PM được chuyển `done → rework`
   bằng dnd-kit và AI Auto-Tasking có structured output.
 - Daily Deadline Copilot: quét task quá hạn mỗi ngày, hỏi thăm riêng assignee
   và cảnh báo riêng PM trong Bot Chat khi task trễ từ 48 giờ.
@@ -98,7 +98,7 @@ Schema hiện tại gồm:
 
 - `users`: profile, skills, EQ answers.
 - `documents`: nội dung tài liệu và embedding `vector(1536)`.
-- `tasks`: task Kanban với status `todo | doing | done`.
+- `tasks`: task Kanban với status `todo | doing | rework | done`; Rework là luồng kiểm duyệt chỉ PM được thao tác.
 - `deadline_notifications`: hộp thư riêng cho check-in và escalation deadline.
 - `match_documents`: RPC similarity search cho RAG.
 

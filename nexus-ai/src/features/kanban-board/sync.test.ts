@@ -44,6 +44,19 @@ test("PM Team board nhận trạng thái mới từ phiên member", () => {
   );
 });
 
+test("member nhận trạng thái Rework do PM cập nhật qua realtime", () => {
+  const synced = applyKanbanTaskStatusUpdate(initialTasks, {
+    id: "member-task",
+    status: "rework",
+    updatedAt: "2026-08-01T01:00:00.000Z",
+  });
+
+  assert.equal(
+    synced.find((item) => item.id === "member-task")?.status,
+    "rework",
+  );
+});
+
 test("Personal board của member dùng cùng trạng thái đã đồng bộ", () => {
   const synced = applyKanbanTaskStatusUpdate(initialTasks, {
     id: "member-task",

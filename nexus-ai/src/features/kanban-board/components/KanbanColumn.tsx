@@ -1,7 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { CheckCircle2, Circle, Clock3 } from "lucide-react";
+import { CheckCircle2, Circle, Clock3, RotateCcw } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { TaskStatus } from "@/types";
@@ -31,6 +31,13 @@ const columnMeta = {
     accent: "bg-emerald-500",
     soft: "bg-emerald-50/60",
   },
+  rework: {
+    title: "Rework",
+    description: "PM yêu cầu làm lại",
+    icon: RotateCcw,
+    accent: "bg-rose-500",
+    soft: "bg-rose-50/70",
+  },
 } satisfies Record<
   TaskStatus,
   {
@@ -43,15 +50,19 @@ const columnMeta = {
 >;
 
 export function KanbanColumn({
+  canManageRework,
   status,
   tasks,
 }: {
+  canManageRework: boolean;
   status: TaskStatus;
   tasks: KanbanTask[];
 }) {
+  const isReworkLocked = status === "rework" && !canManageRework;
   const { isOver, setNodeRef } = useDroppable({
     id: status,
     data: { status },
+    disabled: isReworkLocked,
   });
   const meta = columnMeta[status];
   const Icon = meta.icon;
@@ -87,7 +98,11 @@ export function KanbanColumn({
 
       <div className="flex flex-1 flex-col gap-3">
         {tasks.map((task) => (
-          <DraggableTaskCard key={task.id} task={task} />
+          <DraggableTaskCard
+            disabled={isReworkLocked}
+            key={task.id}
+            task={task}
+          />
         ))}
         {tasks.length === 0 ? (
           <div
@@ -96,7 +111,7 @@ export function KanbanColumn({
               isOver && "border-violet-400 bg-white text-violet-600",
             )}
           >
-            Kéo task vào đây
+            {isReworkLocked ? "Chỉ PM có thể đưa task vào Rework" : "Kéo task vào đây"}
           </div>
         ) : (
           <div className="min-h-10 flex-1 rounded-2xl border border-dashed border-transparent" />

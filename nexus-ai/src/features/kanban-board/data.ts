@@ -147,6 +147,7 @@ export async function getKanbanBoardData(
     tasks,
     members,
     canAutoTask: access.role === "pm",
+    canManageRework: access.role === "pm",
     deadlineEscalationHours: deadlineEscalationHours(),
     dataSource: "supabase",
   };

@@ -37,6 +37,7 @@ export type DashboardTaskItem = {
 export type DashboardStats = {
   todo: number;
   doing: number;
+  rework: number;
   done: number;
   total: number;
   completionPercentage: number;
@@ -94,11 +95,6 @@ export type RoleDashboardData =
       generatedAt: string;
     };
 
-type MembershipRow = {
-  project_id: string;
-  role: "pm" | "member";
-};
-
 type ProjectRow = {
   id: string;
   name: string;
@@ -129,7 +125,7 @@ type RiskRow = {
   created_at: string;
 };
 
-const TASK_STATUSES: TaskStatus[] = ["todo", "doing", "done"];
+const TASK_STATUSES: TaskStatus[] = ["todo", "doing", "rework", "done"];
 const PRIORITIES: TaskPriority[] = ["low", "medium", "high"];
 const RED_FLAG_THRESHOLD_HOURS = 48;
 
@@ -146,10 +142,19 @@ function displayName(emailOrName?: string | null) {
   return emailOrName.includes("@") ? emailOrName.split("@")[0] : emailOrName;
 }
 
+function projectNameFromRelation(value: unknown) {
+  if (Array.isArray(value)) return projectNameFromRelation(value[0]);
+  if (!value || typeof value !== "object" || !("name" in value)) return null;
+
+  const name = (value as { name?: unknown }).name;
+  return typeof name === "string" && name.trim() ? name : null;
+}
+
 function calculateStats(tasks: DashboardTaskItem[]): DashboardStats {
   const stats: DashboardStats = {
     todo: 0,
     doing: 0,
+    rework: 0,
     done: 0,
     total: tasks.length,
     completionPercentage: 0,
@@ -220,7 +225,6 @@ export async function getRoleDashboardData(selectedProjectId?: string): Promise<
   const supabase = await createClient();
   const {
     data: { user },
-    error: userError,
   } = await supabase.auth.getUser();
 
   const userName = displayName(user?.user_metadata?.name || user?.email || "Demo User");
@@ -228,7 +232,7 @@ export async function getRoleDashboardData(selectedProjectId?: string): Promise<
   const generatedAt = now.toISOString();
 
   let userProjects: ProjectOption[] = [];
-  let userId = user?.id || "demo_user";
+  const userId = user?.id || "demo_user";
 
   if (user) {
     const { data: memberships } = await supabase
@@ -238,10 +242,11 @@ export async function getRoleDashboardData(selectedProjectId?: string): Promise<
 
     if (memberships && memberships.length > 0) {
       userProjects = memberships.map((m) => {
-        const p = (m.projects as any) || {};
         return {
           id: m.project_id,
-          name: p.name || `Project ${m.project_id.slice(0, 6)}`,
+          name:
+            projectNameFromRelation(m.projects) ||
+            `Project ${m.project_id.slice(0, 6)}`,
           role: (m.role as "pm" | "member") || "member",
         };
       });
@@ -258,7 +263,8 @@ export async function getRoleDashboardData(selectedProjectId?: string): Promise<
   }
 
   // Determine active project
-  let activeProject = userProjects.find((p) => p.id === selectedProjectId) || userProjects[0];
+  const activeProject =
+    userProjects.find((p) => p.id === selectedProjectId) || userProjects[0];
   const activeRole = activeProject.role;
 
   // Build Projects Progress Overview Header for ALL user projects

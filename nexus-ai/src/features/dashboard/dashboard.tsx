@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Clock3,
   ListTodo,
+  RotateCcw,
 } from "lucide-react";
 
 import type { DashboardAnalytics } from "./dashboard-analytics";
@@ -50,6 +51,13 @@ export function Dashboard({
       icon: Clock3,
       accent: NEXUS_THEME.red,
       background: NEXUS_THEME.redSoft,
+    },
+    {
+      label: "Rework",
+      value: stats.rework,
+      icon: RotateCcw,
+      accent: "#E11D48",
+      background: "#FFF1F2",
     },
     {
       label: "Done",
@@ -107,7 +115,7 @@ export function Dashboard({
           </span>
         </header>
 
-        <section className="mb-6 grid gap-4 md:grid-cols-3">
+        <section className="mb-6 grid gap-4 md:grid-cols-4">
           {statusCards.map(({ label, value, icon: Icon, accent, background }) => (
             <article className={cardClassName} key={label}>
               <div className="flex items-center justify-between">

@@ -9,9 +9,12 @@ import {
   ExternalLink,
   HeartHandshake,
   MessageCircleHeart,
+  RotateCcw,
   ShieldCheck,
   X,
 } from "lucide-react";
+
+import { createClient } from "@/lib/supabase/client";
 
 import type { ProactiveCheckIn } from "./checkin";
 
@@ -21,7 +24,7 @@ type ProactiveCheckInBubbleProps = {
 
 type QuickReply = "help" | "okay" | null;
 
-const POLL_INTERVAL_MS = 5 * 60 * 1000;
+const POLL_INTERVAL_MS = 30 * 1000;
 const STORAGE_PREFIX = "nexus-proactive-checkin:";
 
 function readSnoozeUntil(checkInId: string) {
@@ -89,6 +92,22 @@ export function ProactiveCheckInBubble({
     }
 
     void loadCheckIn();
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`proactive-check-in:${projectId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "tasks",
+          filter: `project_id=eq.${projectId}`,
+        },
+        () => {
+          void loadCheckIn();
+        },
+      )
+      .subscribe();
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === "visible") void loadCheckIn();
     }, POLL_INTERVAL_MS);
@@ -96,6 +115,7 @@ export function ProactiveCheckInBubble({
     return () => {
       isActive = false;
       window.clearInterval(intervalId);
+      void supabase.removeChannel(channel);
     };
   }, [projectId]);
 
@@ -169,12 +189,18 @@ export function ProactiveCheckInBubble({
         <div className="flex items-center gap-2">
           <span
             className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${
-              checkIn.kind === "overdue"
-                ? "bg-rose-50 text-rose-700"
-                : "bg-amber-50 text-amber-700"
+              checkIn.kind === "rework"
+                ? "bg-violet-50 text-violet-700"
+                : checkIn.kind === "overdue"
+                  ? "bg-rose-50 text-rose-700"
+                  : "bg-amber-50 text-amber-700"
             }`}
           >
-            {checkIn.kind === "overdue" ? "Deadline trễ" : "Tải việc cao"}
+            {checkIn.kind === "rework"
+              ? "Yêu cầu Rework"
+              : checkIn.kind === "overdue"
+                ? "Deadline trễ"
+                : "Tải việc cao"}
           </span>
           <span className="text-[10px] text-slate-400">Vừa cập nhật</span>
         </div>
@@ -196,10 +222,16 @@ export function ProactiveCheckInBubble({
               onClick={() => handleQuickReply("help")}
               type="button"
             >
-              <HeartHandshake aria-hidden="true" size={15} />
-              {checkIn.kind === "overdue"
-                ? "Mình đang gặp blocker"
-                : "Mình cần sắp xếp lại"}
+              {checkIn.kind === "rework" ? (
+                <RotateCcw aria-hidden="true" size={15} />
+              ) : (
+                <HeartHandshake aria-hidden="true" size={15} />
+              )}
+              {checkIn.kind === "rework"
+                ? "Xem task & xử lý rework"
+                : checkIn.kind === "overdue"
+                  ? "Mình đang gặp blocker"
+                  : "Mình cần sắp xếp lại"}
             </button>
             <button
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
@@ -207,7 +239,9 @@ export function ProactiveCheckInBubble({
               type="button"
             >
               <ShieldCheck aria-hidden="true" size={15} />
-              Mình vẫn kiểm soát được
+              {checkIn.kind === "rework"
+                ? "Mình đã nắm yêu cầu"
+                : "Mình vẫn kiểm soát được"}
             </button>
           </div>
         )}
@@ -215,8 +249,9 @@ export function ProactiveCheckInBubble({
         {quickReply === "help" && (
           <div className="space-y-3 rounded-2xl border border-violet-100 bg-violet-50/60 p-3">
             <p className="text-xs leading-5 text-violet-950">
-              Mình chưa tự động nhắn thay bạn. Bạn có thể cập nhật blocker ở Team
-              Chat để PM thấy ngữ cảnh, hoặc mở Board để điều chỉnh task.
+              {checkIn.kind === "rework"
+                ? "Mở Board để xem task cần rework. Nếu tiêu chí chưa rõ, hãy hỏi PM ở Team Chat trước khi chỉnh sửa."
+                : "Mình chưa tự động nhắn thay bạn. Bạn có thể cập nhật blocker ở Team Chat để PM thấy ngữ cảnh, hoặc mở Board để điều chỉnh task."}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <Link
@@ -240,8 +275,9 @@ export function ProactiveCheckInBubble({
         {quickReply === "okay" && (
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3">
             <p className="text-xs leading-5 text-emerald-900">
-              Cảm ơn bạn đã phản hồi. Mình sẽ tạm ngừng nhắc tín hiệu này trong
-              12 giờ; nhớ cập nhật tiến độ để cả nhóm cùng nắm nhé.
+              {checkIn.kind === "rework"
+                ? "Đã ghi nhận. Mình sẽ tạm ngừng nhắc yêu cầu Rework này trong 12 giờ; task vẫn ở Rework cho đến khi PM cập nhật trạng thái."
+                : "Cảm ơn bạn đã phản hồi. Mình sẽ tạm ngừng nhắc tín hiệu này trong 12 giờ; nhớ cập nhật tiến độ để cả nhóm cùng nắm nhé."}
             </p>
           </div>
         )}

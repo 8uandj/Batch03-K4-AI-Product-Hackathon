@@ -1,11 +1,12 @@
 import { ProjectAccessError, requireProjectAccess } from "@/features/workspace/access";
+import { validateKanbanTransition } from "@/features/kanban-board/transitions";
 import type { TaskStatus } from "@/types";
 
 type RouteContext = {
   params: Promise<{ id: string; taskId: string }>;
 };
 
-const allowedStatuses: TaskStatus[] = ["todo", "doing", "done"];
+const allowedStatuses: TaskStatus[] = ["todo", "doing", "rework", "done"];
 
 export async function PATCH(request: Request, { params }: RouteContext) {
   try {
@@ -15,7 +16,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
     if (!allowedStatuses.includes(status)) {
       return Response.json(
-        { error: "Trạng thái task phải là todo, doing hoặc done." },
+        { error: "Trạng thái task phải là todo, doing, rework hoặc done." },
         { status: 400 },
       );
     }
@@ -27,9 +28,37 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       });
     }
 
-    const { supabase } = await requireProjectAccess(projectId);
+    const { role, supabase } = await requireProjectAccess(projectId);
     if (!supabase) {
       throw new Error("Không thể kết nối dữ liệu project.");
+    }
+
+    const { data: currentTask, error: taskError } = await supabase
+      .from("tasks")
+      .select("id,status")
+      .eq("id", taskId)
+      .eq("project_id", projectId)
+      .maybeSingle();
+
+    if (taskError) throw new Error(taskError.message);
+    if (!currentTask) {
+      return Response.json(
+        { error: "Không tìm thấy task trong project này." },
+        { status: 404 },
+      );
+    }
+
+    const transition = validateKanbanTransition({
+      canManageRework: role === "pm",
+      currentStatus: currentTask.status as TaskStatus,
+      nextStatus: status,
+    });
+
+    if (!transition.allowed) {
+      return Response.json(
+        { error: transition.message },
+        { status: transition.code === "pm_required" ? 403 : 409 },
+      );
     }
 
     const updatedAt = new Date().toISOString();

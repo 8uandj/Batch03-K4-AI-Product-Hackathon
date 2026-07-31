@@ -75,7 +75,7 @@ type RiskRow = {
   user_id: string | null;
 };
 
-const TASK_STATUSES: TaskStatus[] = ["todo", "doing", "done"];
+const TASK_STATUSES: TaskStatus[] = ["todo", "doing", "rework", "done"];
 
 function isTaskStatus(value: string): value is TaskStatus {
   return TASK_STATUSES.includes(value as TaskStatus);
@@ -93,7 +93,7 @@ function countByStatus(tasks: TaskRow[]) {
       if (isTaskStatus(task.status)) stats[task.status] += 1;
       return stats;
     },
-    { todo: 0, doing: 0, done: 0 },
+    { todo: 0, doing: 0, rework: 0, done: 0 },
   );
 }
 
@@ -219,7 +219,7 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
     isTaskStatus(task.status),
   );
   const stats = countByStatus(tasks);
-  const totalTasks = stats.todo + stats.doing + stats.done;
+  const totalTasks = stats.todo + stats.doing + stats.rework + stats.done;
   const memberRows = (membersResult.data ?? []) as MemberRow[];
   const userIds = memberRows.map((member) => member.user_id);
 
@@ -258,7 +258,7 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
       description: project.description || "Chưa có mô tả project.",
       progress: totalTasks === 0 ? 0 : Math.round((stats.done / totalTasks) * 100),
       documentsIndexed: documentsResult.count ?? 0,
-      activeTasks: stats.todo + stats.doing,
+      activeTasks: stats.todo + stats.doing + stats.rework,
       members,
       deadlineAt: project.deadline_at,
     },

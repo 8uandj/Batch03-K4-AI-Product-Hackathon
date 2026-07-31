@@ -20,6 +20,7 @@ import {
   HeartHandshake,
   LayoutDashboard,
   RefreshCw,
+  RotateCcw,
   ShieldAlert,
   Sparkles,
   UserRound,
@@ -40,12 +41,13 @@ import {
   applyKanbanTaskStatusSnapshot,
   applyKanbanTaskStatusUpdate,
 } from "../sync";
+import { validateKanbanTransition } from "../transitions";
 import type { KanbanBoardData, KanbanTask } from "../types";
 import { AutoTaskingDialog } from "./AutoTaskingDialog";
 import { KanbanColumn } from "./KanbanColumn";
 import { TaskCardPreview } from "./TaskCard";
 
-const statuses: TaskStatus[] = ["todo", "doing", "done"];
+const statuses: TaskStatus[] = ["todo", "doing", "done", "rework"];
 
 type ToastState = {
   tone: "success" | "warning" | "error";
@@ -221,6 +223,16 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
     const currentTask = tasks.find((task) => task.id === taskId);
 
     if (!currentTask || !nextStatus || currentTask.status === nextStatus) return;
+
+    const transition = validateKanbanTransition({
+      canManageRework: initialData.canManageRework,
+      currentStatus: currentTask.status,
+      nextStatus,
+    });
+    if (!transition.allowed) {
+      setToast({ tone: "warning", message: transition.message });
+      return;
+    }
 
     const previousTasks = tasks;
     setTasks((current) =>
@@ -468,7 +480,7 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
           </div>
         </div>
 
-        <div className="relative mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="relative mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <Metric
             icon={<Circle aria-hidden="true" size={16} />}
             label="To-do"
@@ -483,6 +495,11 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
             icon={<CheckCircle2 aria-hidden="true" size={16} />}
             label="Done"
             value={tasksByStatus.done.length}
+          />
+          <Metric
+            icon={<RotateCcw aria-hidden="true" size={16} />}
+            label="Rework"
+            value={tasksByStatus.rework.length}
           />
           <Metric
             icon={<UsersRound aria-hidden="true" size={16} />}
@@ -606,6 +623,11 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
                 ? "Chỉ hiển thị các task được giao cho bạn."
                 : "Hiển thị toàn bộ task và người phụ trách trong project."}
             </p>
+            <p className="mt-1 text-[10px] font-semibold text-rose-600">
+              {initialData.canManageRework
+                ? "PM có thể kéo task từ Done sang Rework và điều phối lại trạng thái."
+                : "Task Rework ở chế độ chỉ xem; chỉ PM có quyền thay đổi."}
+            </p>
           </div>
         </div>
         <span className="w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">
@@ -621,9 +643,10 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
         onDragStart={onDragStart}
         sensors={sensors}
       >
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid gap-4 xl:grid-cols-4">
           {statuses.map((status) => (
             <KanbanColumn
+              canManageRework={initialData.canManageRework}
               key={status}
               status={status}
               tasks={tasksByStatus[status]}

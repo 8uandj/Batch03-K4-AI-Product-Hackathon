@@ -317,7 +317,7 @@ function mapTask(
     id: string;
     title: string;
     description: string | null;
-    status: "todo" | "doing" | "done";
+    status: "todo" | "doing" | "rework" | "done";
     priority: TaskPriority;
     assignee_id: string;
     required_skills: string[] | null;
