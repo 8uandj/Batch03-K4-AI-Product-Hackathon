@@ -48,10 +48,10 @@ export function Sidebar() {
       isActive: pathname.startsWith("/project/") && pathname.endsWith("/board"),
     },
     {
-      label: projectId ? "Knowledge" : "Knowledge · demo",
-      href: `${projectBase}/documents`,
+      label: "Knowledge",
+      href: projectId ? `${projectBase}/documents` : "/knowledge",
       icon: Bot,
-      isActive: pathname.startsWith("/project/") && pathname.includes("/documents"),
+      isActive: pathname === "/knowledge" || (pathname.startsWith("/project/") && pathname.includes("/documents")),
     },
     {
       label: projectId ? "Chat" : "Chat · demo",

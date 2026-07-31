@@ -45,6 +45,7 @@ export interface Project {
   description: string | null;
   owner_id: string;
   status: ProjectStatus;
+  deadline_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -87,6 +88,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   assignee_id: string;
+  required_skills: string[];
   due_at: string | null;
   updated_at: string;
   created_at: string;
@@ -169,7 +171,7 @@ export type Database = {
       >;
       projects: TableDefinition<
         Project,
-        OptionalGenerated<Project, 'id' | 'status' | 'created_at' | 'updated_at'>,
+        OptionalGenerated<Project, 'id' | 'status' | 'deadline_at' | 'created_at' | 'updated_at'>,
         Partial<Omit<Project, 'id'>>,
         [
           {
@@ -237,7 +239,7 @@ export type Database = {
         Task,
         OptionalGenerated<
           Task,
-          'id' | 'project_id' | 'description' | 'status' | 'priority' | 'due_at' | 'updated_at' | 'created_at'
+          'id' | 'project_id' | 'description' | 'status' | 'priority' | 'required_skills' | 'due_at' | 'updated_at' | 'created_at'
         >,
         Partial<Omit<Task, 'id'>>,
         [

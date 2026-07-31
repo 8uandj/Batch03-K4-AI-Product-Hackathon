@@ -36,7 +36,12 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const isPrivateRoute = privateRoutes.some((route) => pathname.startsWith(route));
+  const isKanbanDemoRoute =
+    pathname === "/project/demo/board" ||
+    pathname.startsWith("/api/projects/demo/tasks");
+  const isPrivateRoute =
+    !isKanbanDemoRoute &&
+    privateRoutes.some((route) => pathname.startsWith(route));
   const isAuthRoute = pathname.startsWith("/login");
   const isOnboardingRoute = pathname.startsWith("/onboarding");
   const isCallbackRoute = pathname.startsWith("/auth/callback");

@@ -82,23 +82,26 @@ test("dataset rỗng trả về tiến độ 0% thay vì chia cho 0", () => {
 test("fetch Supabase ánh xạ dữ liệu và bỏ status ngoài schema", async () => {
   const client: TasksDataClient = {
     from: () => ({
-      select: async () => ({
-        data: [
-          {
-            id: 10,
-            title: "Task hợp lệ",
-            status: "done",
-            updated_at: "2026-07-30T10:00:00.000Z",
-          },
-          {
-            id: 11,
-            title: "Task sai status",
-            status: "blocked",
-            updated_at: "2026-07-30T10:00:00.000Z",
-          },
-        ],
-        error: null,
-      }),
+      select: async () =>
+        ({
+          data: [
+            {
+              id: "10",
+              title: "Task hợp lệ",
+              status: "done",
+              assignee_id: "usr_1",
+              updated_at: "2026-07-30T10:00:00.000Z",
+            },
+            {
+              id: "11",
+              title: "Task sai status",
+              status: "blocked",
+              assignee_id: "usr_1",
+              updated_at: "2026-07-30T10:00:00.000Z",
+            },
+          ],
+          error: null,
+        } as any),
     }),
   };
 

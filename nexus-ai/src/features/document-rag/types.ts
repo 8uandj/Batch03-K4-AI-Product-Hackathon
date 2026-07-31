@@ -36,3 +36,18 @@ export type UploadResult = {
   chunks: number;
   mode: "mock" | "supabase";
 };
+
+export type KnowledgeProject = {
+  id: string;
+  name: string;
+  description: string | null;
+  role: "pm" | "member";
+};
+
+export type DocumentSource = {
+  sourceId: string;
+  filename: string;
+  chunks: number;
+  mimeType: string;
+  createdAt: string | null;
+};

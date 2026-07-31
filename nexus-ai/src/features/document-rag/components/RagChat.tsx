@@ -7,6 +7,7 @@ import type { ChatMessage, RagSourceReference } from "../types";
 
 type RagChatProps = {
   projectId: string;
+  projectName: string;
 };
 
 const initialMessage: ChatMessage = {
@@ -16,7 +17,7 @@ const initialMessage: ChatMessage = {
     "Chào bạn, mình là Nexus Knowledge Bot. Hãy hỏi mình về tài liệu của dự án; câu trả lời sẽ kèm nguồn để bạn kiểm tra.",
 };
 
-export function RagChat({ projectId }: RagChatProps) {
+export function RagChat({ projectId, projectName }: RagChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -98,7 +99,7 @@ export function RagChat({ projectId }: RagChatProps) {
           <h1 className="text-base font-semibold text-slate-950">
             Nexus Knowledge Bot
           </h1>
-          <p className="mt-1 text-xs text-slate-500">Project · {projectId}</p>
+          <p className="mt-1 text-xs text-slate-500">Project · {projectName}</p>
         </div>
         <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
           <span className="size-2 rounded-full bg-emerald-500" /> Sẵn sàng

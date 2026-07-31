@@ -7,9 +7,10 @@ import type { UploadResult } from "../types";
 
 type DocumentUploadProps = {
   projectId: string;
+  onUploaded?: (result: UploadResult) => void;
 };
 
-export function DocumentUpload({ projectId }: DocumentUploadProps) {
+export function DocumentUpload({ projectId, onUploaded }: DocumentUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -34,6 +35,7 @@ export function DocumentUpload({ projectId }: DocumentUploadProps) {
       };
       if (!response.ok) throw new Error(payload.error || "Upload thất bại.");
       setResult(payload);
+      onUploaded?.(payload);
     } catch (uploadError) {
       setError(
         uploadError instanceof Error ? uploadError.message : "Upload thất bại.",
