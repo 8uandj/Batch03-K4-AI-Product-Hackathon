@@ -1,10 +1,105 @@
 import Link from "next/link";
-import { BadgeCheck, FolderKanban } from "lucide-react";
+import { BadgeCheck, FolderKanban, BrainCircuit, Bug, ListTodo, MessageSquare, Scale, MessageCircleHeart } from "lucide-react";
 
 import { ProfileForm } from "@/features/profile/components/ProfileForm";
 import { getProfilePageData } from "@/features/profile/data";
 
 export const dynamic = "force-dynamic";
+
+function EqSummaryDisplay({ eqSummary }: { eqSummary: Record<string, any> | string | null | undefined }) {
+  if (!eqSummary || (typeof eqSummary === "object" && Object.keys(eqSummary).length === 0)) {
+    return (
+      <p className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs text-slate-500">
+        Chưa có dữ liệu trắc nghiệm EQ. Hãy hoàn thành Onboarding để khởi tạo.
+      </p>
+    );
+  }
+
+  let eqObj: Record<string, any> = {};
+  if (typeof eqSummary === "string") {
+    try {
+      eqObj = JSON.parse(eqSummary);
+    } catch {
+      return (
+        <div className="mt-3 rounded-2xl bg-slate-50 p-4 text-xs leading-6 text-slate-700 border border-slate-200">
+          {eqSummary}
+        </div>
+      );
+    }
+  } else {
+    eqObj = eqSummary;
+  }
+
+  const items = [
+    {
+      label: "Xử lý Bug kỹ thuật",
+      value: eqObj.bug_handling || eqObj.q1_bugHandling || eqObj.q1,
+      icon: Bug,
+      color: "text-amber-600 bg-amber-50 border-amber-100",
+    },
+    {
+      label: "Phân chia Task",
+      value: eqObj.task_preference || eqObj.q2_taskPreference || eqObj.q2,
+      icon: ListTodo,
+      color: "text-blue-600 bg-blue-50 border-blue-100",
+    },
+    {
+      label: "Kênh trao đổi",
+      value: eqObj.communication || eqObj.q3_communication || eqObj.q3,
+      icon: MessageSquare,
+      color: "text-indigo-600 bg-indigo-50 border-indigo-100",
+    },
+    {
+      label: "Giải quyết Bất đồng",
+      value: eqObj.conflict_resolution || eqObj.q4_conflictResolution || eqObj.q4,
+      icon: Scale,
+      color: "text-rose-600 bg-rose-50 border-rose-100",
+    },
+    {
+      label: "Tiếp nhận Feedback",
+      value: eqObj.feedback_handling || eqObj.q5_feedbackHandling || eqObj.q5,
+      icon: MessageCircleHeart,
+      color: "text-emerald-600 bg-emerald-50 border-emerald-100",
+    },
+  ].filter((item) => Boolean(item.value));
+
+  const summaryText = eqObj.summary && typeof eqObj.summary === "string" ? eqObj.summary : null;
+
+  return (
+    <div className="mt-4 space-y-3">
+      {summaryText && (
+        <div className="rounded-2xl bg-violet-50/80 p-3.5 border border-violet-100 text-xs text-violet-900 leading-relaxed font-medium">
+          <span className="font-bold text-violet-700">💡 Tổng quan:</span> {summaryText}
+        </div>
+      )}
+
+      <div className="space-y-2.5">
+        {items.map((item, idx) => {
+          const IconComponent = item.icon;
+          return (
+            <div key={idx} className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-3 flex flex-col gap-1 transition hover:bg-slate-50">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <span className={`p-1 rounded-md border ${item.color}`}>
+                  <IconComponent size={13} />
+                </span>
+                {item.label}
+              </span>
+              <span className="text-xs font-semibold text-slate-800 pl-6 leading-snug">
+                {String(item.value)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {items.length === 0 && !summaryText && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-500">
+          Chưa có thông tin EQ chi tiết.
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default async function ProfilePage() {
   let data;
@@ -51,8 +146,11 @@ export default async function ProfilePage() {
             </div>
           </div>
           <div className="rounded-3xl border bg-white p-5 shadow-sm">
-            <h2 className="font-bold text-slate-950">EQ summary</h2>
-            <pre className="mt-4 max-h-64 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs leading-5 text-slate-100">{JSON.stringify(profile.eq_summary ?? {}, null, 2)}</pre>
+            <div className="flex items-center gap-2">
+              <BrainCircuit className="text-violet-600" size={18} />
+              <h2 className="font-bold text-slate-950">EQ summary</h2>
+            </div>
+            <EqSummaryDisplay eqSummary={profile.eq_summary as any} />
           </div>
         </aside>
         <ProfileForm profile={profile} />
