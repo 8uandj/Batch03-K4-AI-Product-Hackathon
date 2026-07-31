@@ -95,6 +95,7 @@ create table public.tasks (
   priority text not null default 'medium'
     check (priority in ('low', 'medium', 'high')),
   assignee_id uuid not null references public.users(id),
+  required_skills text[] not null default '{}',
   due_at timestamp with time zone,
   updated_at timestamp with time zone not null default now(),
   created_at timestamp with time zone not null default now()
@@ -164,6 +165,7 @@ create index documents_embedding_hnsw_idx
   on public.documents using hnsw (embedding vector_cosine_ops);
 create index tasks_project_id_idx on public.tasks (project_id);
 create index tasks_assignee_id_idx on public.tasks (assignee_id);
+create index tasks_project_id_status_idx on public.tasks (project_id, status);
 create index chat_rooms_project_id_idx on public.chat_rooms (project_id);
 create index chat_messages_room_id_created_at_idx
   on public.chat_messages (room_id, created_at);
