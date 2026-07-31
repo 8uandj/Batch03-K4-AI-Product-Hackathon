@@ -1,9 +1,9 @@
 -- Grant execute permissions on match_documents to authenticated and anon roles
 -- so that it can be called using the publishable key.
 grant execute on function public.match_documents(
-  vector(1536),
+  vector,
   uuid,
-  float,
+  double precision,
   integer
 ) to authenticated, anon;
 

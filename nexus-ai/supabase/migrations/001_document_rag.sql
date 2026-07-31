@@ -69,9 +69,9 @@ as $$
 $$;
 
 grant execute on function public.match_documents(
-  vector(1536),
+  vector,
   uuid,
-  float,
+  double precision,
   integer
 ) to service_role;
 
