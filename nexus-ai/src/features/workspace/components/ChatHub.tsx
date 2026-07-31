@@ -12,9 +12,13 @@ type ChatHubProps = {
 };
 
 export async function ChatHub({ projectId, active = "overview" }: ChatHubProps) {
-  if (active === "team") return <TeamChat projectId={projectId} />;
+  const projects = await getCurrentUserProjects();
+
+  if (active === "team") {
+    return <TeamChat projectId={projectId} userProjects={projects} />;
+  }
+
   if (active === "bot") {
-    const projects = await getCurrentUserProjects();
     const projectName =
       projects.find((project) => project.id === projectId)?.name ??
       (projectId === "demo" ? "Demo project" : "Project");
@@ -44,7 +48,7 @@ export async function ChatHub({ projectId, active = "overview" }: ChatHubProps) 
 
       <div className="grid gap-4 md:grid-cols-2">
         <ChatSpaceCard
-          description="Không gian trao đổi nội bộ, có AI conflict support ở mock mode."
+          description="Không gian trao đổi nội bộ, có AI conflict support và chuyển đổi phòng chat đa dự án."
           href={`/project/${projectId}/chat/team`}
           icon="team"
           title="Team Chat"
