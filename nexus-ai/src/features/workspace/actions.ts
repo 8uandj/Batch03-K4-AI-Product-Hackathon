@@ -178,3 +178,93 @@ export async function updateProjectDeadline(
     };
   }
 }
+
+export async function joinProjectWithInput(
+  _previousState: WorkspaceActionState,
+  formData: FormData,
+): Promise<WorkspaceActionState> {
+  try {
+    const input = getString(formData, "input");
+    if (!input) return { error: "Vui lòng nhập Project ID hoặc Link Invite." };
+
+    const { supabase, user } = await requireUser();
+
+    // Check if it is a UUID (Project ID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(input)) {
+      if (input === "demo") {
+        redirect(`/project/demo`);
+      }
+
+      // Check if project exists
+      const { data: project, error: projectError } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("id", input)
+        .maybeSingle();
+
+      if (projectError || !project) {
+        return { error: "Không tìm thấy project với ID này." };
+      }
+
+      // Check if already a member
+      const { data: member } = await supabase
+        .from("project_members")
+        .select("role")
+        .eq("project_id", input)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (member) {
+        redirect(`/project/${input}`);
+      }
+
+      // Insert member
+      const { error: insertError } = await supabase
+        .from("project_members")
+        .insert({
+          project_id: input,
+          user_id: user.id,
+          role: "member",
+        });
+
+      if (insertError) {
+        return { error: insertError.message };
+      }
+
+      redirect(`/project/${input}`);
+    }
+
+    // Otherwise, treat as invite link or token
+    let token = input;
+    if (input.includes("/join/")) {
+      const parts = input.split("/join/");
+      token = parts[parts.length - 1].split("?")[0].split("#")[0].trim();
+    }
+
+    if (token === "demo") {
+      redirect(`/project/demo`);
+    }
+
+    // Call accept_project_invite RPC
+    const { data: projectId, error: inviteError } = await supabase.rpc("accept_project_invite", {
+      invite_token: token,
+    });
+
+    if (inviteError || !projectId) {
+      return { error: inviteError?.message || "Mã invite không hợp lệ hoặc đã hết hạn." };
+    }
+
+    redirect(`/project/${projectId}`);
+  } catch (error) {
+    const digest =
+      typeof error === "object" && error && "digest" in error
+        ? String(error.digest)
+        : "";
+    if (digest.startsWith("NEXT_REDIRECT")) throw error;
+
+    return {
+      error: error instanceof Error ? error.message : "Có lỗi xảy ra khi tham gia project.",
+    };
+  }
+}
