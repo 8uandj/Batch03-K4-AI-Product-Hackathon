@@ -45,7 +45,7 @@ import { AutoTaskingDialog } from "./AutoTaskingDialog";
 import { KanbanColumn } from "./KanbanColumn";
 import { TaskCardPreview } from "./TaskCard";
 
-const statuses: TaskStatus[] = ["todo", "doing", "done"];
+const statuses: TaskStatus[] = ["todo", "doing", "done", "rework"];
 
 type ToastState = {
   tone: "success" | "warning" | "error";
@@ -62,6 +62,7 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
   );
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
   const [showAutoTasking, setShowAutoTasking] = useState(false);
+  const [showPmOnlyReworkModal, setShowPmOnlyReworkModal] = useState(false);
   const [monitoring, setMonitoring] = useState(false);
   const [refreshingProgress, setRefreshingProgress] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -222,6 +223,17 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
 
     if (!currentTask || !nextStatus || currentTask.status === nextStatus) return;
 
+    const isPm = initialData.currentUserRole === "pm" || initialData.canAutoTask;
+
+    if (nextStatus === "rework" && !isPm) {
+      setShowPmOnlyReworkModal(true);
+      setToast({
+        tone: "error",
+        message: "🚫 Chỉ PM mới có quyền chỉnh rework.",
+      });
+      return;
+    }
+
     const previousTasks = tasks;
     setTasks((current) =>
       current.map((task) =>
@@ -230,6 +242,30 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
           : task,
       ),
     );
+
+    if (nextStatus === "rework") {
+      const reworkData = {
+        taskId: currentTask.id,
+        taskTitle: currentTask.title,
+        assigneeId: currentTask.assigneeId,
+        assigneeName: currentTask.assigneeName,
+        dueAt: currentTask.dueAt,
+        projectId: initialData.projectId,
+        projectName: initialData.projectName,
+        timestamp: Date.now(),
+      };
+      try {
+        window.localStorage.setItem(
+          `nexus-rework-task:${initialData.projectId}`,
+          JSON.stringify(reworkData),
+        );
+      } catch {
+        // storage fallback
+      }
+      window.dispatchEvent(
+        new CustomEvent("kanban-task-rework", { detail: reworkData }),
+      );
+    }
 
     if (initialData.dataSource === "mock") {
       setToast({ tone: "success", message: "Đã cập nhật task trong mock state." });
@@ -615,13 +651,14 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
       </section>
 
       <DndContext
+        id="kanban-dnd-context"
         collisionDetection={closestCorners}
         onDragCancel={() => setActiveTask(null)}
         onDragEnd={onDragEnd}
         onDragStart={onDragStart}
         sensors={sensors}
       >
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
           {statuses.map((status) => (
             <KanbanColumn
               key={status}
@@ -643,6 +680,39 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
           onCreated={addGeneratedTasks}
           projectId={initialData.projectId}
         />
+      ) : null}
+
+      {showPmOnlyReworkModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl border border-rose-100 text-center space-y-4">
+            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 shadow-inner">
+              <ShieldAlert size={28} />
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-slate-900">
+                Cảnh Báo Quyền Hạn
+              </h3>
+              <p className="mt-2 text-sm font-bold text-rose-600 bg-rose-50 p-3.5 rounded-2xl border border-rose-100 leading-relaxed">
+                🚫 Chỉ PM mới có quyền chỉnh rework
+              </p>
+            </div>
+
+            <p className="text-xs text-slate-500 leading-5">
+              Tính năng chuyển công việc sang cột Rework (Cần làm lại) dành riêng cho Quản trị viên (PM) để đánh giá chất lượng sản phẩm.
+            </p>
+
+            <div className="pt-2">
+              <button
+                onClick={() => setShowPmOnlyReworkModal(false)}
+                type="button"
+                className="w-full rounded-2xl bg-slate-900 px-5 py-3 text-xs font-bold text-white transition hover:bg-slate-800 shadow-md"
+              >
+                Đã hiểu
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

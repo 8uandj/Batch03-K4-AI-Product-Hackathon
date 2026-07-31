@@ -2,7 +2,7 @@ import type { TaskStatus } from "@/types";
 
 import type { KanbanTask } from "./types";
 
-const taskStatuses: TaskStatus[] = ["todo", "doing", "done"];
+const taskStatuses: TaskStatus[] = ["todo", "doing", "rework", "done"];
 
 export type TaskStatusUpdate = {
   id: string;

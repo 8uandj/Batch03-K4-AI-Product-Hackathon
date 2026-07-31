@@ -1,7 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { CheckCircle2, Circle, Clock3 } from "lucide-react";
+import { CheckCircle2, Circle, Clock3, RefreshCcwDot } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { TaskStatus } from "@/types";
@@ -21,8 +21,15 @@ const columnMeta = {
     title: "Doing",
     description: "Đang được thực thi",
     icon: Clock3,
-    accent: "bg-amber-500",
-    soft: "bg-amber-50/60",
+    accent: "bg-indigo-500",
+    soft: "bg-indigo-50/60",
+  },
+  rework: {
+    title: "Rework (Cần làm lại)",
+    description: "Chưa đạt yêu cầu - PM trả về",
+    icon: RefreshCcwDot,
+    accent: "bg-rose-600",
+    soft: "bg-rose-50/70 border border-rose-200",
   },
   done: {
     title: "Done",

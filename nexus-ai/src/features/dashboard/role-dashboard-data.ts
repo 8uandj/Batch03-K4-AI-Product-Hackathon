@@ -37,6 +37,7 @@ export type DashboardTaskItem = {
 export type DashboardStats = {
   todo: number;
   doing: number;
+  rework: number;
   done: number;
   total: number;
   completionPercentage: number;
@@ -150,6 +151,7 @@ function calculateStats(tasks: DashboardTaskItem[]): DashboardStats {
   const stats: DashboardStats = {
     todo: 0,
     doing: 0,
+    rework: 0,
     done: 0,
     total: tasks.length,
     completionPercentage: 0,

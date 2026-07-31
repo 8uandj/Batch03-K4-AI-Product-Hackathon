@@ -2,7 +2,7 @@ import type { Task, TaskStatus } from "@/types";
 
 export type { TaskStatus };
 
-export const TASK_STATUSES = ["todo", "doing", "done"] as const;
+export const TASK_STATUSES = ["todo", "doing", "rework", "done"] as const;
 
 export interface DashboardTask {
   id: string;
@@ -16,6 +16,7 @@ export interface DashboardTask {
 export interface TaskStats {
   todo: number;
   doing: number;
+  rework: number;
   done: number;
   total: number;
   completionPercentage: number;
@@ -73,7 +74,7 @@ export class DashboardAnalyticsError extends Error {
 }
 
 export function isTaskStatus(value: string): value is TaskStatus {
-  return TASK_STATUSES.includes(value as TaskStatus);
+  return (TASK_STATUSES as readonly string[]).includes(value);
 }
 
 export function calculateDashboardAnalytics(
@@ -96,6 +97,7 @@ export function calculateDashboardAnalytics(
   const stats: TaskStats = {
     todo: 0,
     doing: 0,
+    rework: 0,
     done: 0,
     total: tasks.length,
     completionPercentage: 0,
@@ -104,9 +106,11 @@ export function calculateDashboardAnalytics(
   let warningCount = 0;
 
   for (const task of tasks) {
-    stats[task.status] += 1;
+    if (task.status in stats) {
+      stats[task.status] += 1;
+    }
 
-    if (task.status !== "doing") {
+    if (task.status !== "doing" && task.status !== "rework") {
       continue;
     }
 
@@ -116,26 +120,27 @@ export function calculateDashboardAnalytics(
       continue;
     }
 
-    const delayHours = (now.getTime() - updatedAt.getTime()) / 3_600_000;
-    if (delayHours <= thresholdHours) {
-      continue;
-    }
+    const delayMs = now.getTime() - updatedAt.getTime();
+    const delayHours = Math.floor(delayMs / (1000 * 60 * 60));
 
-    redFlags.push({
-      taskId: task.id,
-      taskTitle: task.title,
-      assigneeId: task.assigneeId ?? null,
-      assigneeName:
-        task.assigneeName?.trim() || task.assigneeId || "Chua phan cong",
-      updatedAt: updatedAt.toISOString(),
-      delayHours: Math.floor(delayHours),
-    });
+    if (delayHours >= thresholdHours) {
+      redFlags.push({
+        taskId: task.id,
+        taskTitle: task.title.trim() || "Task khong co tieu de",
+        assigneeId: task.assigneeId ?? null,
+        assigneeName: task.assigneeName?.trim() || "Chua phan cong",
+        updatedAt: task.updatedAt,
+        delayHours,
+      });
+    }
   }
 
-  stats.completionPercentage =
-    stats.total === 0 ? 0 : Math.round((stats.done / stats.total) * 100);
+  redFlags.sort((a, b) => b.delayHours - a.delayHours);
 
-  redFlags.sort((left, right) => right.delayHours - left.delayHours);
+  stats.completionPercentage =
+    tasks.length === 0
+      ? 0
+      : Math.round((stats.done / tasks.length) * 100);
 
   return {
     stats,
@@ -183,5 +188,35 @@ export async function fetchDashboardAnalytics(
   return {
     ...analytics,
     warningCount: analytics.warningCount + invalidStatusCount,
+  };
+}
+
+export function formatDelayHours(hours: number): string {
+  if (!Number.isFinite(hours) || hours < 0) {
+    return "0h";
+  }
+
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+
+  if (days === 0) {
+    return `${hours}h`;
+  }
+
+  if (remainingHours === 0) {
+    return `${days}d`;
+  }
+
+  return `${days}d ${remainingHours}h`;
+}
+
+export function fromDomainTask(task: Task): DashboardTask {
+  return {
+    id: task.id,
+    title: task.title,
+    status: task.status,
+    updatedAt: task.updated_at,
+    assigneeId: task.assignee_id,
+    assigneeName: null,
   };
 }
