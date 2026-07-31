@@ -11,11 +11,13 @@ import {
   MailPlus,
   UsersRound,
   Sparkles,
+  X,
 } from "lucide-react";
 
 import { InviteMemberForm } from "./InviteMemberForm";
 import { ProjectAnalysisForm } from "./ProjectAnalysisForm";
 import { ProjectAiPlanner } from "./ProjectAiPlanner";
+import { EqRadar } from "@/features/eq-radar/components/EqRadar";
 
 import type {
   WorkspaceInvite,
@@ -41,7 +43,8 @@ export function ProjectOverview({
   currentRole,
   dataSource,
 }: ProjectOverviewProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "planner">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "planner" | "eq-radar">("overview");
+  const [selectedMember, setSelectedMember] = useState<WorkspaceProject["members"][number] | null>(null);
 
   return (
     <section className="space-y-6">
@@ -93,7 +96,7 @@ export function ProjectOverview({
       </div>
 
       {/* Tab Triggers */}
-      <div className="flex border-b border-slate-200 bg-white rounded-lg p-1 shadow-sm gap-2">
+      <div className="flex border-b border-slate-200 bg-white rounded-lg p-1 shadow-sm gap-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab("overview")}
           className={`flex-1 sm:flex-initial text-center px-6 py-2.5 text-sm font-black rounded-xl transition ${
@@ -115,9 +118,19 @@ export function ProjectOverview({
           <Sparkles size={14} className={activeTab === "planner" ? "text-cyan-300 animate-pulse" : ""} />
           Nexus AI Task Planner
         </button>
+        <button
+          onClick={() => setActiveTab("eq-radar")}
+          className={`flex-1 sm:flex-initial text-center px-6 py-2.5 text-sm font-black rounded-xl transition flex items-center justify-center gap-1.5 ${
+            activeTab === "eq-radar"
+              ? "bg-slate-950 text-white shadow-sm"
+              : "text-slate-500 hover:text-slate-850 hover:bg-slate-50"
+          }`}
+        >
+          <BrainCircuit size={14} className={activeTab === "eq-radar" ? "text-violet-300 animate-pulse" : ""} />
+          EQ Radar & Team Health
+        </button>
       </div>
-
-      {activeTab === "overview" ? (
+      {activeTab === "overview" && (
         <>
           <section className="rounded-3xl border bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -156,45 +169,64 @@ export function ProjectOverview({
           </section>
 
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <section className="rounded-lg border bg-white p-5 shadow-sm">
+            <section className="rounded-3xl border bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center gap-2">
                 <UsersRound aria-hidden="true" className="text-slate-500" size={18} />
-                <h2 className="font-semibold text-slate-950">Thành viên & insight</h2>
+                <h2 className="font-black text-slate-955 text-base">Thành viên & insight</h2>
               </div>
               {project.members.length ? (
-                <div className="grid gap-3 md:grid-cols-3">
-                  {project.members.map((member) => (
-                    <article className="rounded-lg border border-slate-200 p-4" key={member.id}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="font-semibold text-slate-900">{member.name}</h3>
-                          <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">
-                            {member.role}
-                          </p>
+                <div className="space-y-3">
+                  {project.members.map((member) => {
+                    const workloadColor =
+                      member.workload > 70
+                        ? "bg-rose-500"
+                        : member.workload > 45
+                          ? "bg-amber-500"
+                          : "bg-emerald-500";
+                    const workloadBg =
+                      member.workload > 70
+                        ? "bg-rose-50 text-rose-700"
+                        : member.workload > 45
+                          ? "bg-amber-50 text-amber-700"
+                          : "bg-emerald-50 text-emerald-700";
+
+                    return (
+                      <button
+                        key={member.id}
+                        onClick={() => setSelectedMember(member)}
+                        className="w-full text-left rounded-2xl border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-md hover:shadow-cyan-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white font-black text-xs uppercase">
+                            {member.name.slice(0, 2)}
+                          </span>
+                          <div>
+                            <h3 className="font-bold text-slate-955 text-sm flex items-center gap-2">
+                              {member.name}
+                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600 font-bold uppercase">
+                                {member.role}
+                              </span>
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
+                              {member.eqSignal}
+                            </p>
+                          </div>
                         </div>
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                          {member.workload}% load
-                        </span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-1">
-                        {member.skills.length ? (
-                          member.skills.map((skill) => (
-                            <span
-                              className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"
-                              key={skill}
-                            >
-                              {skill}
+
+                        <div className="w-full sm:w-48 shrink-0 space-y-1">
+                          <div className="flex justify-between text-[10px] font-bold text-slate-705">
+                            <span>Workload:</span>
+                            <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase ${workloadBg}`}>
+                              {member.workload}% load
                             </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-slate-400">Chưa khai báo skills</span>
-                        )}
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-slate-600">
-                        {member.eqSignal}
-                      </p>
-                    </article>
-                  ))}
+                          </div>
+                          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${workloadColor}`} style={{ width: `${member.workload}%` }} />
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
                 <EmptyState text="Chưa có member trong project_members." />
@@ -287,7 +319,9 @@ export function ProjectOverview({
             </section>
           </div>
         </>
-      ) : (
+      )}
+
+      {activeTab === "planner" && (
         <ProjectAiPlanner
           projectId={project.id}
           initialDeadline={project.deadlineAt ?? null}
@@ -295,6 +329,96 @@ export function ProjectOverview({
           documentsIndexed={project.documentsIndexed}
           currentRole={currentRole}
         />
+      )}
+
+      {activeTab === "eq-radar" && (
+        <EqRadar projectId={project.id} members={project.members} />
+      )}
+
+      {selectedMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl relative animate-scale-up">
+            <button
+              onClick={() => setSelectedMember(null)}
+              className="absolute top-4 right-4 rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+              aria-label="Close modal"
+            >
+              <X size={18} />
+            </button>
+
+            <header className="text-center border-b border-slate-100 pb-5">
+              <span className="flex size-16 mx-auto items-center justify-center rounded-2xl bg-slate-950 text-white text-xl font-black uppercase shadow-lg shadow-slate-100">
+                {selectedMember.name.slice(0, 2)}
+              </span>
+              <h3 className="mt-3 text-xl font-black text-slate-950">{selectedMember.name}</h3>
+              <span className="mt-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 uppercase tracking-wider inline-block">
+                {selectedMember.role}
+              </span>
+            </header>
+
+            <div className="mt-5 space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-black uppercase text-slate-505">Skills & Chuyên môn</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedMember.skills.length ? (
+                    selectedMember.skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 border border-slate-200/40"
+                      >
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-slate-405 italic">Chưa khai báo skills</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-black uppercase text-slate-505">Tín hiệu EQ & Phong cách</h4>
+                <p className="rounded-2xl border border-cyan-100 bg-cyan-50/20 p-4 text-sm text-slate-800 leading-relaxed font-medium">
+                  {selectedMember.eqSignal}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-black uppercase text-slate-505">
+                  Phân tải & Task hiện tại ({Math.round(selectedMember.workload / 20)} tasks)
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          selectedMember.workload > 70
+                            ? "bg-rose-500"
+                            : selectedMember.workload > 45
+                              ? "bg-amber-500"
+                              : "bg-emerald-500"
+                        }`}
+                        style={{ width: `${selectedMember.workload}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-bold text-slate-705">{selectedMember.workload}% workload</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    *Mức tải được tự động tối ưu hóa dựa trên mức độ ưu tiên và thời hạn hoàn thành các task được giao.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <footer className="mt-6 pt-4 border-t border-slate-105 flex justify-end">
+              <button
+                onClick={() => setSelectedMember(null)}
+                className="rounded-xl bg-slate-955 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-slate-800"
+              >
+                Đóng
+              </button>
+            </footer>
+          </div>
+        </div>
       )}
     </section>
   );
