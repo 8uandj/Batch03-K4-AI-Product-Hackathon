@@ -1,4 +1,4 @@
-import type { DocumentChunk, RagSource } from "./types";
+import type { DocumentChunk, DocumentSource, RagSource } from "./types";
 
 const FALLBACK_CONTEXT =
   "Dự án Nexus AI dùng Next.js và Supabase. Nexus kết hợp quản lý công việc với hỗ trợ sức khỏe đội nhóm.";
@@ -14,6 +14,29 @@ const store =
 export function saveMockChunks(projectId: string, chunks: DocumentChunk[]) {
   const current = store.get(projectId) ?? [];
   store.set(projectId, [...current, ...chunks]);
+}
+
+export function listMockSources(projectId: string): DocumentSource[] {
+  const chunks = store.get(projectId) ?? [];
+  const sources = new Map<string, DocumentSource>();
+
+  for (const chunk of chunks) {
+    const existing = sources.get(chunk.sourceId);
+    if (existing) {
+      existing.chunks += 1;
+      continue;
+    }
+
+    sources.set(chunk.sourceId, {
+      sourceId: chunk.sourceId,
+      filename: chunk.filename,
+      chunks: 1,
+      mimeType: chunk.metadata.mimeType,
+      createdAt: null,
+    });
+  }
+
+  return [...sources.values()];
 }
 
 export function searchMockChunks(projectId: string, query: string): RagSource[] {

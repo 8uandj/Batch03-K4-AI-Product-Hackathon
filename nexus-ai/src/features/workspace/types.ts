@@ -24,6 +24,7 @@ export interface WorkspaceProject {
   documentsIndexed: number;
   activeTasks: number;
   members: WorkspaceMemberProfile[];
+  deadlineAt?: string | null;
 }
 
 export interface WorkspaceInvite {

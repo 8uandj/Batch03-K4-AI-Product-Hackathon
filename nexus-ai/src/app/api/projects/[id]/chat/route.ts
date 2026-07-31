@@ -14,7 +14,19 @@ type IncomingMessage = { role: "user" | "assistant"; content: string };
 export async function POST(request: Request, { params }: RouteContext) {
   try {
     const { id: projectId } = await params;
-    await requireProjectAccess(projectId);
+    const { supabase } = await requireProjectAccess(projectId);
+    const projectName =
+      projectId === "demo"
+        ? "Demo project"
+        : (
+            (
+              await supabase
+                .from("projects")
+                .select("name")
+                .eq("id", projectId)
+                .maybeSingle()
+            ).data?.name ?? "Project"
+          );
 
     const body = (await request.json()) as {
       message?: string;
@@ -39,7 +51,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     );
 
     if (ragConfig.mode === "mock") {
-      return new Response(buildMockAnswer(sources), {
+      return new Response(buildMockAnswer(sources, projectName), {
         headers: {
           "content-type": "text/plain; charset=utf-8",
           "x-rag-mode": "mock",
@@ -51,7 +63,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     const history = (body.history ?? []).slice(-6);
     const result = streamText({
       model: openai(ragConfig.chatModel),
-      system: buildRagSystemPrompt(sources),
+      system: buildRagSystemPrompt(sources, projectName),
       messages: [...history, { role: "user", content: message }],
       temperature: 0.2,
     });

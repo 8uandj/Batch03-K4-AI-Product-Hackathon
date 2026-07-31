@@ -1,6 +1,6 @@
 import type { RagSource } from "./types";
 
-export function buildRagSystemPrompt(sources: RagSource[]) {
+export function buildRagSystemPrompt(sources: RagSource[], projectName = "Project") {
   const context = sources
     .map(
       (source, index) =>
@@ -8,7 +8,7 @@ export function buildRagSystemPrompt(sources: RagSource[]) {
     )
     .join("\n\n");
 
-  return `Bạn là Nexus Knowledge Bot, trợ lý kiến thức nội bộ của một dự án.
+  return `Bạn là Nexus Knowledge Bot, trợ lý kiến thức nội bộ của project "${projectName}".
 
 NGUYÊN TẮC BẮT BUỘC:
 1. Chỉ trả lời bằng thông tin có trong NGỮ CẢNH ĐƯỢC TRUY XUẤT.
@@ -24,10 +24,10 @@ NGỮ CẢNH ĐƯỢC TRUY XUẤT:
 ${context || "(Không tìm thấy ngữ cảnh phù hợp.)"}`;
 }
 
-export function buildMockAnswer(sources: RagSource[]) {
+export function buildMockAnswer(sources: RagSource[], projectName = "Project") {
   const first = sources[0];
   if (!first) {
     return "Mình chưa tìm thấy thông tin này trong tài liệu dự án. Bạn hãy hỏi PM hoặc bổ sung tài liệu.";
   }
-  return `Theo tài liệu dự án: ${first.content} [Nguồn 1]`;
+  return `Theo tài liệu của project "${projectName}": ${first.content} [Nguồn 1]`;
 }

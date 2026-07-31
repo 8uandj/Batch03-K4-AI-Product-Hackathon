@@ -45,6 +45,7 @@ export interface Project {
   description: string | null;
   owner_id: string;
   status: ProjectStatus;
+  deadline_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -170,7 +171,7 @@ export type Database = {
       >;
       projects: TableDefinition<
         Project,
-        OptionalGenerated<Project, 'id' | 'status' | 'created_at' | 'updated_at'>,
+        OptionalGenerated<Project, 'id' | 'status' | 'deadline_at' | 'created_at' | 'updated_at'>,
         Partial<Omit<Project, 'id'>>,
         [
           {

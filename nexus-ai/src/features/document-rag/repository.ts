@@ -1,7 +1,7 @@
 import { ragConfig } from "./config";
 import { getOpenAIClient, getSupabaseAdmin } from "./clients";
-import { saveMockChunks, searchMockChunks } from "./mock-store";
-import type { DocumentChunk, RagSource } from "./types";
+import { listMockSources, saveMockChunks, searchMockChunks } from "./mock-store";
+import type { DocumentChunk, DocumentSource, RagSource } from "./types";
 
 export async function indexChunks(chunks: DocumentChunk[]) {
   if (ragConfig.mode === "mock") {
@@ -67,4 +67,39 @@ export async function retrieveContext(
     content: row.content,
     similarity: row.similarity,
   }));
+}
+
+
+export async function listDocumentSources(
+  projectId: string,
+): Promise<DocumentSource[]> {
+  if (ragConfig.mode === "mock") return listMockSources(projectId);
+
+  const { data, error } = await getSupabaseAdmin()
+    .from("documents")
+    .select("source_id,filename,metadata,created_at")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(`Không thể tải danh sách tài liệu: ${error.message}`);
+
+  const sources = new Map<string, DocumentSource>();
+  for (const row of (data ?? []) as Array<{
+    source_id: string;
+    filename: string;
+    metadata: { mimeType?: string; totalChunks?: number } | null;
+    created_at: string | null;
+  }>) {
+    if (sources.has(row.source_id)) continue;
+
+    sources.set(row.source_id, {
+      sourceId: row.source_id,
+      filename: row.filename,
+      chunks: row.metadata?.totalChunks ?? 0,
+      mimeType: row.metadata?.mimeType ?? "application/octet-stream",
+      createdAt: row.created_at,
+    });
+  }
+
+  return [...sources.values()];
 }

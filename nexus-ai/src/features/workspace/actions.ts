@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireProjectAccess } from "./access";
 
 type WorkspaceActionState = {
   error?: string;
@@ -137,6 +138,43 @@ export async function generateProjectRecommendations(
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Không thể chạy AI analysis.",
+    };
+  }
+}
+
+export async function updateProjectDeadline(
+  _previousState: WorkspaceActionState & { success?: boolean },
+  formData: FormData,
+): Promise<WorkspaceActionState & { success?: boolean }> {
+  try {
+    const projectId = getString(formData, "projectId");
+    const deadlineAtStr = getString(formData, "deadlineAt");
+
+    if (!projectId) return { error: "Thiếu project id." };
+    const deadlineAt = deadlineAtStr ? new Date(deadlineAtStr).toISOString() : null;
+
+    const { supabase, role } = await requireProjectAccess(projectId);
+    if (role !== "pm") {
+      return { error: "Chỉ PM mới có quyền cập nhật deadline dự án." };
+    }
+
+    if (projectId === "demo") {
+      return { success: true };
+    }
+
+    const { error: updateError } = await supabase
+      .from("projects")
+      .update({ deadline_at: deadlineAt, updated_at: new Date().toISOString() })
+      .eq("id", projectId);
+
+    if (updateError) {
+      return { error: updateError.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Không thể cập nhật deadline.",
     };
   }
 }

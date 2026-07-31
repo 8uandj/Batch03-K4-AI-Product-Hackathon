@@ -2,6 +2,7 @@ import { Bot, MessageSquare } from "lucide-react";
 import Link from "next/link";
 
 import { RagWorkspace } from "@/features/document-rag/components/RagWorkspace";
+import { getCurrentUserProjects } from "@/features/workspace/data";
 
 import { TeamChat } from "./TeamChat";
 
@@ -10,9 +11,21 @@ type ChatHubProps = {
   active?: "overview" | "team" | "bot";
 };
 
-export function ChatHub({ projectId, active = "overview" }: ChatHubProps) {
+export async function ChatHub({ projectId, active = "overview" }: ChatHubProps) {
   if (active === "team") return <TeamChat projectId={projectId} />;
-  if (active === "bot") return <RagWorkspace projectId={projectId} />;
+  if (active === "bot") {
+    const projects = await getCurrentUserProjects();
+    const projectName =
+      projects.find((project) => project.id === projectId)?.name ??
+      (projectId === "demo" ? "Demo project" : "Project");
+    return (
+      <RagWorkspace
+        projectId={projectId}
+        projectName={projectName}
+        projects={projects}
+      />
+    );
+  }
 
   return (
     <section className="space-y-6">

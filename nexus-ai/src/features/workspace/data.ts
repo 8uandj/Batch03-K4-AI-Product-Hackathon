@@ -178,7 +178,7 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
 
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("id,name,description,status")
+    .select("id,name,description,status,deadline_at")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -252,6 +252,7 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
       documentsIndexed: documentsResult.count ?? 0,
       activeTasks: stats.todo + stats.doing,
       members,
+      deadlineAt: project.deadline_at,
     },
     invites: ((invitesResult.data ?? []) as InviteRow[]).map((invite) => ({
       id: invite.id,

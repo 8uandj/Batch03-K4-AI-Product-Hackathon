@@ -14,6 +14,7 @@ export const mockWorkspaceProject: WorkspaceProject = {
   progress: 42,
   documentsIndexed: 8,
   activeTasks: 12,
+  deadlineAt: "2026-08-31T23:59:59.000Z",
   members: [
     {
       id: "pm-01",

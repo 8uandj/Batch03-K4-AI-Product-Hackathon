@@ -17,9 +17,11 @@ create table public.projects (
   owner_id uuid not null references public.users(id),
   status text not null default 'active'
     check (status in ('active', 'archived')),
+  deadline_at timestamp with time zone,
   created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone not null default now()
 );
+
 
 create table public.project_members (
   project_id uuid not null references public.projects(id) on delete cascade,
