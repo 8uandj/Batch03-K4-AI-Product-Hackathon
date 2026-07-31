@@ -37,12 +37,6 @@ test("đếm task, tính phần trăm và chỉ cắm cờ Doing quá 48 giờ",
       status: "todo",
       updatedAt: "2026-07-20T00:00:00.000Z",
     },
-    {
-      id: "5",
-      title: "Cần làm lại",
-      status: "rework",
-      updatedAt: "2026-07-29T00:00:00.000Z",
-    },
   ];
 
   const result = calculateDashboardAnalytics(tasks, { now: NOW });
@@ -50,10 +44,9 @@ test("đếm task, tính phần trăm và chỉ cắm cờ Doing quá 48 giờ",
   assert.deepEqual(result.stats, {
     todo: 1,
     doing: 2,
-    rework: 1,
     done: 1,
-    total: 5,
-    completionPercentage: 20,
+    total: 4,
+    completionPercentage: 25,
   });
   assert.equal(result.redFlags.length, 1);
   assert.equal(result.redFlags[0]?.taskId, "1");
@@ -133,4 +126,5 @@ test("lỗi Supabase được chuyển thành thông báo có ngữ cảnh", asy
       error.message.includes("permission denied"),
   );
 });
+
 

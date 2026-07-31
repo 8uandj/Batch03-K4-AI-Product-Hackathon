@@ -2,7 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarDays, GripVertical, LockKeyhole } from "lucide-react";
+import { CalendarDays, GripVertical } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -41,17 +41,10 @@ function formatDueDate(value: string) {
   }).format(new Date(value));
 }
 
-export function DraggableTaskCard({
-  disabled = false,
-  task,
-}: {
-  disabled?: boolean;
-  task: KanbanTask;
-}) {
+export function DraggableTaskCard({ task }: { task: KanbanTask }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     data: { status: task.status, task },
-    disabled,
   });
   const overdueHours = getOverdueHours(task);
 
@@ -68,25 +61,15 @@ export function DraggableTaskCard({
     >
       <TaskCardContent
         dragHandle={
-          disabled ? (
-            <span
-              className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-rose-600"
-              title="Chỉ PM có thể thay đổi task Rework"
-            >
-              <LockKeyhole aria-hidden="true" size={11} />
-              PM only
-            </span>
-          ) : (
-            <button
-              aria-label={`Kéo task ${task.title}`}
-              className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-400"
-              type="button"
-              {...attributes}
-              {...listeners}
-            >
-              <GripVertical aria-hidden="true" size={17} />
-            </button>
-          )
+          <button
+            aria-label={`Kéo task ${task.title}`}
+            className="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-400"
+            type="button"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical aria-hidden="true" size={17} />
+          </button>
         }
         overdueHours={overdueHours}
         task={task}

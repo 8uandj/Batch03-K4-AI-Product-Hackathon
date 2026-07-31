@@ -94,8 +94,7 @@ Array<{
 - `project_id`: uuid nullable -> `projects.id`
 - `title`: text
 - `description`: text nullable
-- `status`: `todo | doing | rework | done`
-- `rework`: chỉ PM được chuyển task từ `done` sang `rework` hoặc đưa task ra khỏi `rework`.
+- `status`: `todo | doing | done`
 - `priority`: `low | medium | high`
 - `assignee_id`: uuid -> `users.id`
 - `due_at`: timestamptz nullable

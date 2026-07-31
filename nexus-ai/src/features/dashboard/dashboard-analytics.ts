@@ -2,7 +2,7 @@ import type { Task, TaskStatus } from "@/types";
 
 export type { TaskStatus };
 
-export const TASK_STATUSES = ["todo", "doing", "rework", "done"] as const;
+export const TASK_STATUSES = ["todo", "doing", "done"] as const;
 
 export interface DashboardTask {
   id: string;
@@ -16,7 +16,6 @@ export interface DashboardTask {
 export interface TaskStats {
   todo: number;
   doing: number;
-  rework: number;
   done: number;
   total: number;
   completionPercentage: number;
@@ -97,7 +96,6 @@ export function calculateDashboardAnalytics(
   const stats: TaskStats = {
     todo: 0,
     doing: 0,
-    rework: 0,
     done: 0,
     total: tasks.length,
     completionPercentage: 0,

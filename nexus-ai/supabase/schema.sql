@@ -93,7 +93,7 @@ create table public.tasks (
   title text not null,
   description text,
   status text not null default 'todo'
-    check (status in ('todo', 'doing', 'rework', 'done')),
+    check (status in ('todo', 'doing', 'done')),
   priority text not null default 'medium'
     check (priority in ('low', 'medium', 'high')),
   assignee_id uuid not null references public.users(id),

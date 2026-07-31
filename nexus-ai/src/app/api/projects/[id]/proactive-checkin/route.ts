@@ -14,10 +14,6 @@ type UserRow = {
   email: string | null;
 };
 
-type ProjectRow = {
-  name: string;
-};
-
 export async function GET(_request: Request, { params }: RouteContext) {
   try {
     const { id: projectId } = await params;
@@ -31,21 +27,12 @@ export async function GET(_request: Request, { params }: RouteContext) {
     }
 
     const { supabase, user } = access;
-    const [
-      { data: profile, error: profileError },
-      { data: project, error: projectError },
-      { data: tasks, error: tasksError },
-    ] =
+    const [{ data: profile, error: profileError }, { data: tasks, error: tasksError }] =
       await Promise.all([
         supabase
           .from("users")
           .select("name,email")
           .eq("id", user.id)
-          .maybeSingle(),
-        supabase
-          .from("projects")
-          .select("name")
-          .eq("id", projectId)
           .maybeSingle(),
         supabase
           .from("tasks")
@@ -57,11 +44,6 @@ export async function GET(_request: Request, { params }: RouteContext) {
 
     if (profileError) {
       throw new Error(`Không thể tải hồ sơ: ${profileError.message}`);
-    }
-    if (projectError || !project) {
-      throw new Error(
-        `Không thể tải dự án: ${projectError?.message ?? "Không tìm thấy dự án."}`,
-      );
     }
     if (tasksError) {
       throw new Error(`Không thể tải task: ${tasksError.message}`);
@@ -75,7 +57,6 @@ export async function GET(_request: Request, { params }: RouteContext) {
       "bạn";
     const checkIn = selectProactiveCheckIn({
       projectId,
-      projectName: (project as ProjectRow).name,
       userId: user.id,
       userName,
       tasks: (tasks ?? []) as CheckInTask[],

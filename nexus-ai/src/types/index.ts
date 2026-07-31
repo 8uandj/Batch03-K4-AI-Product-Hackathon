@@ -1,4 +1,4 @@
-export type TaskStatus = 'todo' | 'doing' | 'rework' | 'done';
+export type TaskStatus = 'todo' | 'doing' | 'done';
 export type ProjectRole = 'pm' | 'member';
 export type ProjectStatus = 'active' | 'archived';
 export type InviteStatus = 'pending' | 'awaiting_approval' | 'accepted' | 'revoked' | 'expired';

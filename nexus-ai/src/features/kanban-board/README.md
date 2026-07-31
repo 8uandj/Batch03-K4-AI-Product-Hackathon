@@ -4,9 +4,7 @@ Module Workflow & Automation của Nexus AI.
 
 ## Chức năng
 
-- Board bốn cột `todo`, `doing`, `done`, `rework`.
-- Chỉ PM được kéo task từ `done` sang `rework` và thay đổi task đang ở `rework`.
-- Assignee nhận bong bóng Nexus Care với tên task, dự án và thời gian deadline còn lại.
+- Board ba cột `todo`, `doing`, `done`.
 - Kéo thả bằng `dnd-kit`, cập nhật UI optimistic và rollback khi API lỗi.
 - Card hiển thị priority, skill tags, assignee avatar và deadline.
 - Demo `/project/demo/board` dùng mock state, không ghi database.

@@ -30,7 +30,6 @@ export type KanbanBoardData = {
   tasks: KanbanTask[];
   members: KanbanMember[];
   canAutoTask: boolean;
-  canManageRework: boolean;
   deadlineEscalationHours: number;
   dataSource: "mock" | "supabase";
 };

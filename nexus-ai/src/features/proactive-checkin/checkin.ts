@@ -3,7 +3,7 @@ import {
   type WorkloadTask,
 } from "../eq-radar/analysis.ts";
 
-export type ProactiveCheckInKind = "rework" | "overdue" | "overload";
+export type ProactiveCheckInKind = "overdue" | "overload";
 
 export type ProactiveCheckIn = {
   id: string;
@@ -16,9 +16,8 @@ export type ProactiveCheckIn = {
   task?: {
     id: string;
     title: string;
-    dueAt: string | null;
-    daysOverdue?: number;
-    deadlineLabel?: string;
+    dueAt: string;
+    daysOverdue: number;
   };
 };
 
@@ -28,7 +27,6 @@ export type CheckInTask = WorkloadTask & {
 
 type CheckInInput = {
   projectId: string;
-  projectName: string;
   userId: string;
   userName: string;
   tasks: readonly CheckInTask[];
@@ -51,82 +49,14 @@ function validDate(value: string | null | undefined) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function formatHours(totalHours: number) {
-  const days = Math.floor(totalHours / 24);
-  const hours = totalHours % 24;
-
-  if (days === 0) return `${hours} giờ`;
-  if (hours === 0) return `${days} ngày`;
-  return `${days} ngày ${hours} giờ`;
-}
-
-function deadlineLabel(value: string | null | undefined, now: Date) {
-  const dueAt = validDate(value);
-  if (!dueAt) return "Chưa có deadline";
-
-  const differenceHours = Math.max(
-    1,
-    Math.ceil(Math.abs(dueAt.getTime() - now.getTime()) / (60 * 60 * 1000)),
-  );
-
-  return dueAt.getTime() >= now.getTime()
-    ? `Còn ${formatHours(differenceHours)}`
-    : `Đã quá hạn ${formatHours(differenceHours)}`;
-}
-
 export function selectProactiveCheckIn({
   projectId,
-  projectName,
   userId,
   userName,
   tasks,
   now = new Date(),
 }: CheckInInput): ProactiveCheckIn | null {
   const openTasks = tasks.filter((task) => task.status !== "done");
-  const name = safeDisplayName(userName);
-  const normalizedProjectName = shortTitle(projectName);
-  const reworkTasks = openTasks
-    .filter((task) => task.status === "rework")
-    .sort((left, right) => {
-      const leftUpdatedAt = validDate(left.updated_at)?.getTime() ?? 0;
-      const rightUpdatedAt = validDate(right.updated_at)?.getTime() ?? 0;
-      return rightUpdatedAt - leftUpdatedAt;
-    });
-  const firstRework = reworkTasks[0];
-
-  if (firstRework) {
-    const taskTitle = shortTitle(firstRework.title);
-    const dueAt = validDate(firstRework.due_at);
-    const remaining = deadlineLabel(firstRework.due_at, now);
-
-    return {
-      id: [
-        "rework",
-        projectId,
-        userId,
-        firstRework.id,
-        firstRework.updated_at ?? firstRework.due_at ?? "no-date",
-      ].join(":"),
-      kind: "rework",
-      severity:
-        dueAt && dueAt.getTime() < now.getTime() ? "critical" : "warning",
-      title: "PM yêu cầu rework một task",
-      message: `Chào ${name}, task “${taskTitle}” trong dự án “${normalizedProjectName}” đã được PM chuyển sang Rework vì cần hoàn thiện thêm.`,
-      detail: `Task: “${taskTitle}” · Dự án: “${normalizedProjectName}” · Deadline: ${remaining}${
-        reworkTasks.length > 1
-          ? ` · Bạn còn ${reworkTasks.length - 1} task Rework khác`
-          : ""
-      }.`,
-      activeTasks: openTasks.length,
-      task: {
-        id: firstRework.id,
-        title: taskTitle,
-        dueAt: dueAt?.toISOString() ?? null,
-        deadlineLabel: remaining,
-      },
-    };
-  }
-
   const overdueTasks = openTasks
     .map((task) => ({ task, dueAt: validDate(task.due_at) }))
     .filter(
@@ -135,6 +65,7 @@ export function selectProactiveCheckIn({
     )
     .sort((left, right) => left.dueAt.getTime() - right.dueAt.getTime());
 
+  const name = safeDisplayName(userName);
   const firstOverdue = overdueTasks[0];
 
   if (firstOverdue) {
