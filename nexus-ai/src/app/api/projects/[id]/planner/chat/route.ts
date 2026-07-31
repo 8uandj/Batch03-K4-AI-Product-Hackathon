@@ -27,45 +27,120 @@ type UserRow = {
   skills: string[] | null;
 };
 
-// Mock response for chat negotiation
-function buildMockChatResponse(message: string, currentTasks: TaskDraft[], members: MemberInfo[]): { message: string; tasks: TaskDraft[] } {
+function removeDiacritics(str: string): string {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
+}
+
+function negotiateTasksProgrammatically(
+  message: string,
+  currentTasks: TaskDraft[],
+  members: MemberInfo[]
+): { message: string; tasks: TaskDraft[] } {
   const lowercaseMsg = message.toLowerCase();
-  let text = "Tôi đã ghi nhận ý kiến của bạn và cập nhật kế hoạch.";
+  const normMsg = removeDiacritics(lowercaseMsg);
+  let text = "Tôi đã ghi nhận ý kiến của bạn và cập nhật danh sách task.";
   const updatedTasks = JSON.parse(JSON.stringify(currentTasks)) as TaskDraft[];
 
-  if (lowercaseMsg.includes("dời") || lowercaseMsg.includes("deadline") || lowercaseMsg.includes("muộn") || lowercaseMsg.includes("sớm")) {
-    // Simulate shifting deadlines
-    updatedTasks.forEach((task) => {
-      if (task.priority === "high") {
-        task.due_in_days = Math.max(1, task.due_in_days + 1);
-      } else {
-        task.due_in_days = Math.max(1, task.due_in_days + 2);
-      }
-    });
-    text = "Đã dời thời hạn (deadline) của các task sang muộn hơn từ 1-2 ngày theo ý bạn để giảm tải áp lực ban đầu.";
-  } else if (lowercaseMsg.includes("giao") || lowercaseMsg.includes("chuyển") || lowercaseMsg.includes("thay")) {
-    // Find member to reassign
-    const targetMember = members.find(m => lowercaseMsg.includes(m.name.toLowerCase()));
-    if (targetMember && updatedTasks.length > 0) {
-      // Reassign first medium/low priority task to targetMember
-      const taskToReassign = updatedTasks.find(t => t.priority !== "high") || updatedTasks[0];
-      const oldAssignee = members.find(m => m.id === taskToReassign.assignee_id)?.name || "thành viên cũ";
-      taskToReassign.assignee_id = targetMember.id;
-      text = `Đã chuyển giao task "${taskToReassign.title}" từ ${oldAssignee} sang cho ${targetMember.name} phụ trách.`;
-    } else {
-      text = "Đã phân bổ lại công việc của một số task phụ để tối ưu hóa nhân sự theo yêu cầu của bạn.";
+  // Case 1: Shift deadlines
+  if (
+    normMsg.includes("doi") ||
+    normMsg.includes("deadline") ||
+    normMsg.includes("tre") ||
+    normMsg.includes("muon") ||
+    normMsg.includes("som") ||
+    normMsg.includes("tang") ||
+    normMsg.includes("giam")
+  ) {
+    const dayMatch = lowercaseMsg.match(/(\d+)\s*ngày/);
+    let daysToAdd = 2; // Default fallback
+    if (dayMatch && dayMatch[1]) {
+      daysToAdd = parseInt(dayMatch[1], 10);
     }
-  } else if (lowercaseMsg.includes("thêm") || lowercaseMsg.includes("tạo")) {
-    const newMockTask: TaskDraft = {
-      title: "Task bổ sung theo yêu cầu PM",
-      description: "Nội dung cần thực hiện theo phản hồi trực tiếp của PM.",
+
+    if (normMsg.includes("som") || normMsg.includes("giam")) {
+      daysToAdd = -Math.abs(daysToAdd);
+    }
+
+    updatedTasks.forEach((task) => {
+      task.due_in_days = Math.max(1, task.due_in_days + daysToAdd);
+    });
+
+    if (daysToAdd > 0) {
+      text = `Đã dời thời hạn của các task trễ thêm ${daysToAdd} ngày để hỗ trợ tiến độ dự án.`;
+    } else {
+      text = `Đã rút ngắn thời hạn của các task xuống ${Math.abs(daysToAdd)} ngày theo yêu cầu đẩy nhanh tiến độ.`;
+    }
+  }
+  // Case 2: Reassign tasks
+  else if (
+    normMsg.includes("giao") ||
+    normMsg.includes("chuyen") ||
+    normMsg.includes("thay") ||
+    normMsg.includes("phan")
+  ) {
+    const targetMember = members.find((m) => {
+      const normName = removeDiacritics(m.name.toLowerCase());
+      const parts = normName.split(" ");
+      const firstName = parts[parts.length - 1];
+      return (
+        normMsg.includes(normName) ||
+        (firstName && firstName.length > 2 && normMsg.includes(firstName))
+      );
+    });
+
+    if (targetMember && updatedTasks.length > 0) {
+      const taskToReassign =
+        updatedTasks.find((t) => t.assignee_id !== targetMember.id) ||
+        updatedTasks[0];
+      const oldAssignee =
+        members.find((m) => m.id === taskToReassign.assignee_id)?.name ||
+        "thành viên cũ";
+      taskToReassign.assignee_id = targetMember.id;
+      taskToReassign.required_skills = Array.from(
+        new Set([...taskToReassign.required_skills, ...targetMember.skills.slice(0, 1)]),
+      );
+      text = `Đã chuyển giao task "${taskToReassign.title}" từ ${oldAssignee} sang cho ${targetMember.name} và đồng bộ các kỹ năng cần thiết.`;
+    } else {
+      text = "Đã phân bổ lại nhân sự cho các công việc phù hợp để cân bằng khối lượng công việc.";
+    }
+  }
+  // Case 3: Add new task
+  else if (
+    normMsg.includes("them") ||
+    normMsg.includes("tao") ||
+    normMsg.includes("bo sung")
+  ) {
+    let taskTitle = "Task bổ sung theo yêu cầu PM";
+    const quoteMatch = message.match(/["'“«]([^"'”»]+)["'”»]/);
+    if (quoteMatch && quoteMatch[1]) {
+      taskTitle = quoteMatch[1];
+    } else {
+      const keywordIdx = Math.max(
+        lowercaseMsg.indexOf("thêm task"),
+        lowercaseMsg.indexOf("thêm việc"),
+      );
+      if (keywordIdx !== -1) {
+        const textAfter = message.slice(keywordIdx + 9).trim();
+        if (textAfter.length > 3) {
+          taskTitle = textAfter;
+        }
+      }
+    }
+
+    const newFallbackTask: TaskDraft = {
+      title: taskTitle,
+      description: "Công việc được bổ sung trực tiếp thông qua phản hồi thương thảo của Project Manager.",
       priority: "medium",
-      assignee_id: members[0].id,
+      assignee_id: members[0]?.id || "pm",
       required_skills: ["General"],
-      due_in_days: 7
+      due_in_days: 5,
     };
-    updatedTasks.push(newMockTask);
-    text = "Đã thêm một task bổ sung vào danh sách và gán tạm thời cho bạn (PM) quản lý.";
+    updatedTasks.push(newFallbackTask);
+    text = `Đã bổ sung task mới "${taskTitle}" vào kế hoạch và gán tạm thời cho ${members[0]?.name || "PM"}.`;
   }
 
   return { message: text, tasks: updatedTasks };
@@ -228,9 +303,9 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     // 3. Simulated fallback response
     if (!processed) {
-      const mockResult = buildMockChatResponse(userMessage, currentTasks, members);
-      resultMessage = mockResult.message;
-      updatedTasks = mockResult.tasks;
+      const fallbackResult = negotiateTasksProgrammatically(userMessage, currentTasks, members);
+      resultMessage = fallbackResult.message;
+      updatedTasks = fallbackResult.tasks;
     }
 
     // 4. Update the stored recommendation payload

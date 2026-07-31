@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 
-import type { EQProfile } from "../mockData";
+import type { EQProfile } from "../types";
 import { completeOnboarding } from "../actions";
 import { CVUploader } from "./cv-uploader";
 import { EQTestModal } from "./eq-test-modal";

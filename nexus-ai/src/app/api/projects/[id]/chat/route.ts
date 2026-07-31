@@ -2,7 +2,7 @@ import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
 
 import { ragConfig } from "@/features/document-rag/config";
-import { buildMockAnswer, buildRagSystemPrompt } from "@/features/document-rag/prompt";
+import { buildRagSystemPrompt } from "@/features/document-rag/prompt";
 import { retrieveContext } from "@/features/document-rag/repository";
 import { ProjectAccessError, requireProjectAccess } from "@/features/workspace/access";
 
@@ -53,16 +53,6 @@ export async function POST(request: Request, { params }: RouteContext) {
         })),
       ),
     );
-
-    if (ragConfig.mode === "mock") {
-      return new Response(buildMockAnswer(sources, projectName), {
-        headers: {
-          "content-type": "text/plain; charset=utf-8",
-          "x-rag-mode": "mock",
-          "x-rag-sources": sourceHeader,
-        },
-      });
-    }
 
     const history = (body.history ?? []).slice(-6);
     const result = streamText({

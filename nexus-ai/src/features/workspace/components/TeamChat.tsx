@@ -1,10 +1,25 @@
 import { Bot, MessageSquare, UserRound } from "lucide-react";
 
-import { mockTeamMessages } from "../mock-data";
-
 type TeamChatProps = {
   projectId: string;
 };
+
+const mockTeamMessages = [
+  {
+    id: "msg-1",
+    senderName: "Dev UI",
+    senderType: "user",
+    content: "Chào mọi người, mình vừa tạo repo.",
+    createdAt: "2 giờ trước",
+  },
+  {
+    id: "msg-2",
+    senderName: "Dev RAG",
+    senderType: "user",
+    content: "Chào bạn, mình đang bắt đầu viết backend.",
+    createdAt: "1 giờ trước",
+  },
+];
 
 export function TeamChat({ projectId }: TeamChatProps) {
   return (

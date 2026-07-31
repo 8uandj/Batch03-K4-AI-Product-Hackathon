@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { FileText, Sparkles, Loader2, UploadCloud, X, File as FileIcon } from 'lucide-react';
-import { defaultSkillTags, mockUserProfile } from '../mockData';
+import { defaultSkillTags } from '../types';
 
 interface CVUploaderProps {
     onProfileExtracted: (skills: string[], rawCV: string, file?: File) => void;
@@ -12,7 +12,7 @@ interface CVUploaderProps {
 export const CVUploader: React.FC<CVUploaderProps> = ({ onProfileExtracted, onNextStep }) => {
     const [cvText, setCvText] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [selectedSkills, setSelectedSkills] = useState<string[]>(mockUserProfile.skills);
+    const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [isParsing, setIsParsing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);

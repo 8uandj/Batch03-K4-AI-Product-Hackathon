@@ -1,8 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireProjectAccess } from "@/features/workspace/access";
 import type { TaskPriority, TaskStatus } from "@/types";
-
-import { createMockKanbanData } from "./mock-data";
 import type { KanbanBoardData, KanbanMember, KanbanTask } from "./types";
 
 type ProjectRow = {
@@ -39,12 +37,9 @@ type TaskRow = {
 function fallbackName(user: UserRow) {
   return user.name || user.email?.split("@")[0] || user.id.slice(0, 8);
 }
-
 export async function getKanbanBoardData(
   projectId: string,
 ): Promise<KanbanBoardData | null> {
-  if (projectId === "demo") return createMockKanbanData();
-
   const access = await requireProjectAccess(projectId);
   const supabase = await createClient();
 

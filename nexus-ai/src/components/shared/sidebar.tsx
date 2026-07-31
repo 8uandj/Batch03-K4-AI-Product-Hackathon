@@ -25,13 +25,13 @@ type NavigationItem = {
 
 function getProjectId(pathname: string) {
   const candidate = pathname.match(/^\/project\/([^/]+)/)?.[1];
-  return candidate && candidate !== "new" ? candidate : undefined;
+  if (!candidate || candidate === "new" || candidate === "demo" || candidate === "board") return undefined;
+  return candidate;
 }
 
 export function Sidebar() {
   const pathname = usePathname();
   const projectId = getProjectId(pathname);
-  const projectBase = projectId ? `/project/${projectId}` : "/project/demo";
 
   const workspaceItems: NavigationItem[] = [
     {
@@ -65,13 +65,13 @@ export function Sidebar() {
   const projectItems: NavigationItem[] = [
     {
       label: "Kanban Board",
-      href: `${projectBase}/board`,
+      href: projectId ? `/project/${projectId}/board` : "/project/board",
       icon: KanbanSquare,
       isActive: pathname.endsWith("/board"),
     },
     {
       label: "Knowledge Hub",
-      href: projectId ? `${projectBase}/documents` : "/knowledge",
+      href: projectId ? `/project/${projectId}/documents` : "/knowledge",
       icon: Bot,
       isActive:
         pathname === "/knowledge" ||
@@ -80,7 +80,7 @@ export function Sidebar() {
     },
     {
       label: "Team & Bot Chat",
-      href: `${projectBase}/chat`,
+      href: projectId ? `/project/${projectId}/chat` : "/project",
       icon: MessageSquare,
       isActive: pathname.includes("/chat"),
     },

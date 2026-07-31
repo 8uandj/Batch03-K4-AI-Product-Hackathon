@@ -28,59 +28,135 @@ type UserRow = {
   skills: string[] | null;
 };
 
-// Mock draft generator
-function createMockDrafts(members: MemberInfo[], deadlineDays: number): TaskDraft[] {
-  const templates = [
+// Dynamic heuristic-based fallback draft generator
+function generateDynamicFallbackTasks(
+  projectName: string,
+  projectDescription: string,
+  members: MemberInfo[],
+  deadlineDays: number,
+): TaskDraft[] {
+  const descLower = (projectDescription || "").toLowerCase();
+  const nameLower = (projectName || "").toLowerCase();
+  const context = descLower + " " + nameLower;
+
+  const candidateTemplates = [
     {
-      title: "Phân tích yêu cầu và chốt phạm vi",
-      description: "Đọc project brief, làm rõ các đầu ra, dependency và tiêu chí hoàn thành.",
-      priority: "high" as const,
-      skills: ["Product Analysis", "Documentation"],
+      keywords: ["brief", "scope", "yêu cầu", "phạm vi", "kế hoạch", "analysis", "phân tích"],
+      task: {
+        title: "Phân tích yêu cầu và xác định phạm vi dự án",
+        description: "Phân tích tài liệu project brief, làm rõ các tính năng cốt lõi, sơ đồ luồng dữ liệu và thống nhất các mốc bàn giao.",
+        priority: "high" as const,
+        skills: ["Product Analysis", "Documentation"],
+      }
     },
     {
-      title: "Thiết kế kiến trúc giải pháp & Database contract",
-      description: "Đề xuất các component chính, luồng dữ liệu và API contract giữa Frontend - Backend.",
-      priority: "high" as const,
-      skills: ["System Design", "API"],
+      keywords: ["backend", "db", "database", "api", "supabase", "server", "lưu trữ"],
+      task: {
+        title: "Thiết kế & Xây dựng Backend cùng API Endpoints",
+        description: "Thiết lập cơ sở dữ liệu Supabase, lập trình các API endpoint xử lý logic nghiệp vụ và kết nối dữ liệu an toàn.",
+        priority: "high" as const,
+        skills: ["Development", "Supabase", "API"],
+      }
     },
     {
-      title: "Xây dựng backend cốt lõi & API endpoint",
-      description: "Implement luồng happy path lưu dữ liệu và kết nối cơ sở dữ liệu Supabase.",
-      priority: "high" as const,
-      skills: ["Development", "Supabase"],
+      keywords: ["frontend", "ui", "ux", "giao diện", "react", "tailwind", "css"],
+      task: {
+        title: "Xây dựng giao diện Frontend & Tích hợp API",
+        description: "Phát triển các màn hình responsive sử dụng React/Tailwind, đồng bộ dữ liệu từ API và tối ưu trạng thái loading/empty.",
+        priority: "medium" as const,
+        skills: ["UI/UX", "React", "Development"],
+      }
     },
     {
-      title: "Hoàn thiện giao diện UI & Kết nối dữ liệu",
-      description: "Xây dựng các responsive component bằng React/Tailwind, xử lý loading/empty state.",
-      priority: "medium" as const,
-      skills: ["UI/UX", "React"],
+      keywords: ["rag", "ai", "openai", "embeddings", "vector", "llm", "search", "tìm kiếm"],
+      task: {
+        title: "Tích hợp tính năng AI RAG & Tìm kiếm Vector",
+        description: "Lập trình ingestion pipeline trích xuất văn bản, sinh embeddings qua OpenAI và thiết lập truy vấn ngữ nghĩa.",
+        priority: "high" as const,
+        skills: ["AI Integration", "OpenAI", "Supabase"],
+      }
     },
     {
-      title: "Kiểm thử đầu cuối & Xử lý lỗi",
-      description: "Kiểm tra phân quyền, dữ liệu lỗi và các trường hợp biên của hệ thống.",
-      priority: "medium" as const,
-      skills: ["QA", "Testing"],
+      keywords: ["test", "qa", "kiểm thử", "sửa lỗi", "bug", "lỗi"],
+      task: {
+        title: "Kiểm thử hệ thống & Khắc phục lỗi biên",
+        description: "Thực hiện kiểm thử đầu cuối (End-to-End), rà soát bảo mật phân quyền và sửa các lỗi phát sinh trước khi bàn giao.",
+        priority: "medium" as const,
+        skills: ["QA", "Testing"],
+      }
     },
     {
-      title: "Viết tài liệu bàn giao & Hướng dẫn vận hành",
-      description: "Cập nhật tài liệu kỹ thuật, cách chạy local và chuẩn bị slide giới thiệu.",
-      priority: "low" as const,
-      skills: ["Documentation"],
-    },
+      keywords: ["document", "tài liệu", "hướng dẫn", "bàn giao", "slide", "guide"],
+      task: {
+        title: "Viết tài liệu bàn giao & Hướng dẫn vận hành",
+        description: "Cập nhật tài liệu API, hướng dẫn chạy dự án local và chuẩn bị nội dung thuyết trình nghiệm thu dự án.",
+        priority: "low" as const,
+        skills: ["Documentation"],
+      }
+    }
   ];
 
-  return templates.map((template, index) => {
-    const assignee = members[index % members.length];
-    // Spread tasks within the project deadline days
-    const step = Math.max(1, Math.floor(deadlineDays / templates.length));
+  // Filter templates that match keywords in project context
+  const selectedTemplates = candidateTemplates
+    .filter(t => t.keywords.some(keyword => context.includes(keyword)))
+    .map(t => t.task);
+
+  // If no keywords matched, fallback to 4 standard pipeline tasks
+  if (selectedTemplates.length === 0) {
+    selectedTemplates.push(
+      {
+        title: "Khởi tạo dự án & Thống nhất yêu cầu",
+        description: "Thiết lập cấu trúc dự án ban đầu, phân chia vai trò và xác định các tiêu chí hoàn thành công việc.",
+        priority: "high" as const,
+        skills: ["Product Analysis", "Documentation"],
+      },
+      {
+        title: "Phát triển các API & Tính năng cốt lõi",
+        description: "Viết các hàm xử lý logic nghiệp vụ và liên kết cơ sở dữ liệu backend vững chắc.",
+        priority: "high" as const,
+        skills: ["Development", "API"],
+      },
+      {
+        title: "Lập trình Giao diện & Kết nối API",
+        description: "Hoàn thiện thiết kế UI/UX trên frontend và kết nối đồng bộ dữ liệu từ backend.",
+        priority: "medium" as const,
+        skills: ["UI/UX", "React"],
+      },
+      {
+        title: "Kiểm thử tổng thể & Đóng gói sản phẩm",
+        description: "Kiểm tra toàn bộ luồng hoạt động, xử lý các trường hợp ngoại lệ và viết tài liệu bàn giao.",
+        priority: "medium" as const,
+        skills: ["Testing", "Documentation"],
+      }
+    );
+  }
+
+  // Map and distribute templates to members based on skill match
+  return selectedTemplates.map((template, index) => {
+    // Find member with the most matching skills, fallback to round-robin
+    let assignedMember = members[index % members.length];
+    let maxMatchCount = -1;
+
+    for (const member of members) {
+      const matchCount = member.skills.filter(s =>
+        template.skills.some(ts => ts.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(ts.toLowerCase()))
+      ).length;
+
+      if (matchCount > maxMatchCount) {
+        maxMatchCount = matchCount;
+        assignedMember = member;
+      }
+    }
+
+    const step = Math.max(1, Math.floor(deadlineDays / selectedTemplates.length));
     const due_in_days = Math.min(deadlineDays, Math.max(1, (index + 1) * step));
 
     return {
       title: template.title,
       description: template.description,
       priority: template.priority,
-      assignee_id: assignee.id,
-      required_skills: Array.from(new Set([...template.skills, ...assignee.skills.slice(0, 1)])),
+      assignee_id: assignedMember.id,
+      required_skills: Array.from(new Set([...template.skills, ...assignedMember.skills.slice(0, 1)])),
       due_in_days,
     };
   });
@@ -252,7 +328,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     if (!tasks.length) {
-      tasks = createMockDrafts(members, deadlineDays);
+      tasks = generateDynamicFallbackTasks(projectRow.name, documentSummary, members, deadlineDays);
       mode = "mock";
     }
 

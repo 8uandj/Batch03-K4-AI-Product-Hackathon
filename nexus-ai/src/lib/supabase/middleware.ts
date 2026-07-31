@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-const privateRoutes = ["/project", "/dashboard", "/pm-dashboard", "/onboarding", "/profile", "/join", "/api/projects"];
+const privateRoutes = ["/project", "/dashboard", "/pm-dashboard", "/onboarding", "/profile", "/join", "/api/projects", "/knowledge"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -36,11 +36,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const isKanbanDemoRoute =
-    pathname === "/project/demo/board" ||
-    pathname.startsWith("/api/projects/demo/tasks");
   const isPrivateRoute =
-    !isKanbanDemoRoute &&
     privateRoutes.some((route) => pathname.startsWith(route));
   const isAuthRoute = pathname.startsWith("/login");
   const isOnboardingRoute = pathname.startsWith("/onboarding");

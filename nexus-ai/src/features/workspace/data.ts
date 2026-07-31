@@ -1,12 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { TaskStatus } from "@/types";
 
-import {
-  mockInvites,
-  mockRecommendations,
-  mockRiskEvents,
-  mockWorkspaceProject,
-} from "./mock-data";
 import type {
   WorkspaceInvite,
   WorkspaceMemberProfile,
@@ -147,19 +141,8 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
   recommendations: WorkspaceRecommendation[];
   risks: WorkspaceRiskEvent[];
   currentRole: "pm" | "member";
-  dataSource: "supabase" | "mock";
+  dataSource: "supabase";
 } | null> {
-  if (projectId === "demo") {
-    return {
-      project: mockWorkspaceProject,
-      invites: mockInvites,
-      recommendations: mockRecommendations,
-      risks: mockRiskEvents,
-      currentRole: "pm",
-      dataSource: "mock",
-    };
-  }
-
   const supabase = await createClient();
   const {
     data: { user },

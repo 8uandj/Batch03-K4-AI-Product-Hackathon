@@ -11,36 +11,115 @@ type UserRow = {
   eq_summary: unknown;
 };
 
-// Mock coaching tips database
-const mockCoachingData: Record<string, { stressAnalysis: string; tips: string[]; actionPlan: string }> = {
-  "pm-01": {
-    stressAnalysis: "PM đang gánh vác vai trò điều phối lớn, stress level trung bình (45%). Có dấu hiệu quá lo lắng về thời hạn nhưng kỹ năng quản lý cảm xúc tốt.",
-    tips: [
-      "Tránh tự mình giải quyết mọi sự cố phát sinh; hãy tin tưởng và giao quyền nhiều hơn cho các lead kỹ thuật.",
-      "Sử dụng các kênh thông báo tự động (như Slack/Discord webhook) thay vì liên tục thúc giục trong team chat.",
-      "Dành ra 15 phút tĩnh tâm trước các cuộc họp Sprint review để giữ bình tĩnh."
-    ],
-    actionPlan: "Lập bảng phân quyền (RACI) rõ ràng cho team trong tuần này."
-  },
-  "dev-rag": {
-    stressAnalysis: "Dev RAG đang có workload cao (72% load, 4 tasks). Bạn ấy có dấu hiệu căng thẳng (stress level 75%) do lo ngại về sự thay đổi database schema liên tục từ PM.",
-    tips: [
-      "Hãy làm rõ API contract và sơ đồ DB trước khi yêu cầu bạn ấy viết code ingestion.",
-      "Đánh giá lại workload và dời bớt các task phụ sang Sprint sau hoặc san sẻ cho Dev UI.",
-      "Khi trao đổi, hãy ghi nhận sự đóng góp kỹ thuật của bạn ấy trước khi đưa ra thay đổi yêu cầu."
-    ],
-    actionPlan: "PM gặp riêng 5 phút để chốt cứng DB Schema và đóng băng cập nhật DB trong 3 ngày tới."
-  },
-  "dev-ui": {
-    stressAnalysis: "Dev UI có stress level thấp (35%) nhưng dễ bị block (workload 58%). Tính cách cẩn thận, chi tiết nhưng ngại hỏi khi gặp blocker kỹ thuật.",
-    tips: [
-      "Chủ động hỏi thăm blocker của bạn ấy mỗi ngày thay vì chờ đợi bạn ấy báo cáo.",
-      "Đảm bảo các file Figma hoặc tài liệu mô tả UX/UI được PM chốt sớm và không thay đổi muộn.",
-      "Khuyến khích bạn ấy thảo luận nhiều hơn với Dev RAG về cách tích hợp API."
-    ],
-    actionPlan: "Tổ chức buổi pair-programming ngắn giữa Dev RAG và Dev UI để tháo gỡ điểm nghẽn tích hợp frontend."
-  }
+type CoachingReport = {
+  stressAnalysis: string;
+  tips: string[];
+  actionPlan: string;
 };
+
+// Dynamic rule-based expert coaching suggestion generator
+function generateDynamicCoaching(
+  name: string,
+  skills: string[],
+  activeTasksCount: number,
+  workloadPercentage: number,
+  eqAnswers: Record<string, string> = {}
+): CoachingReport {
+  const stressLevel = Math.min(100, Math.max(10, workloadPercentage + activeTasksCount * 10));
+
+  let stressAnalysis = "";
+  if (workloadPercentage > 70) {
+    stressAnalysis = `Thành viên ${name} đang có dấu hiệu quá tải công việc (tải việc ${workloadPercentage}%). Mức độ stress rất cao (${stressLevel}%) do phải gánh ${activeTasksCount} task chưa hoàn thành cùng lúc. Cần PM sớm san sẻ tải việc để tránh burnout.`;
+  } else if (workloadPercentage > 40) {
+    stressAnalysis = `Thành viên ${name} đang ở mức chịu tải trung bình (tải việc ${workloadPercentage}%). Mức độ stress ở ngưỡng kiểm soát được (${stressLevel}%), tuy nhiên cần PM định kỳ thăm hỏi các blocker phát sinh để tránh dồn ứ công việc.`;
+  } else {
+    stressAnalysis = `Thành viên ${name} có mức tải việc an toàn (${workloadPercentage}%). Trạng thái tinh thần thoải mái, stress level thấp (${stressLevel}%), tinh thần năng nổ và sẵn sàng tiếp nhận thêm công việc hoặc hỗ trợ đồng đội.`;
+  }
+
+  const tips: string[] = [];
+
+  // Tip 1: Skill based communication suggestion
+  const skillsLower = (skills || []).map((s) => s.toLowerCase());
+  if (
+    skillsLower.some(
+      (s) =>
+        s.includes("react") ||
+        s.includes("next") ||
+        s.includes("ui") ||
+        s.includes("frontend"),
+    )
+  ) {
+    tips.push(
+      "Thống nhất chi tiết file Figma, layout và các tiêu chí phản hồi người dùng trước khi bạn ấy bắt tay code frontend.",
+    );
+  } else if (
+    skillsLower.some(
+      (s) =>
+        s.includes("supabase") ||
+        s.includes("sql") ||
+        s.includes("python") ||
+        s.includes("backend") ||
+        s.includes("api"),
+    )
+  ) {
+    tips.push(
+      "Làm rõ API contract, kiểu dữ liệu trả về và cấu trúc database trước khi yêu cầu bạn ấy viết logic nghiệp vụ.",
+    );
+  } else {
+    tips.push(
+      "Làm rõ mục tiêu cốt lõi và các tiêu chí hoàn thành (Acceptance Criteria) cho công việc được giao.",
+    );
+  }
+
+  // Tip 2: Workload based suggestion
+  if (workloadPercentage > 70) {
+    tips.push(
+      "Chủ động rà soát lại các task phụ của bạn ấy và đề xuất dời bớt thời hạn sang Sprint tiếp theo.",
+    );
+  } else if (workloadPercentage < 45) {
+    tips.push(
+      "Khuyến khích bạn ấy tham gia hỗ trợ các task tích hợp hoặc hướng dẫn (pair-programming) cho thành viên khác đang quá tải.",
+    );
+  } else {
+    tips.push(
+      "Hỏi thăm tình trạng các blocker và khuyến khích cập nhật tiến độ đều đặn trên bảng Kanban của nhóm.",
+    );
+  }
+
+  // Tip 3: EQ style suggestion
+  const q1 = eqAnswers?.q1_bugHandling || "";
+  const q2 = eqAnswers?.q2_taskPreference || "";
+  if (q1.includes("A") || q1.toLowerCase().includes("tự tìm cách")) {
+    tips.push(
+      "Khuyên bạn ấy chủ động ping hỏi nhóm sau 30 phút tự gỡ lỗi không thành công để tránh bị bottleneck tiến độ.",
+    );
+  } else if (q2.includes("A") || q2.toLowerCase().includes("chẻ nhỏ")) {
+    tips.push(
+      "Chia nhỏ công việc thành checklist cụ thể từng ngày thay vì giao mục tiêu lớn làm bạn ấy bối rối.",
+    );
+  } else {
+    tips.push(
+      "Tạo không gian giao tiếp cởi mở để thành viên tự đề xuất giải pháp kỹ thuật thay vì PM chỉ định áp đặt.",
+    );
+  }
+
+  // Action plan
+  let actionPlan = "";
+  if (workloadPercentage > 70) {
+    actionPlan =
+      "PM hẹn gặp riêng 5 phút để rà soát danh sách task đang gánh và bàn giao bớt 1 task phụ cho người khác.";
+  } else if (
+    skillsLower.some((s) => s.includes("development") || s.includes("supabase"))
+  ) {
+    actionPlan =
+      "PM tổ chức một buổi review code ngắn và chốt cứng sơ đồ dữ liệu để thành viên yên tâm làm việc.";
+  } else {
+    actionPlan =
+      "PM thăm hỏi nhanh tình hình công việc của bạn ấy trong buổi họp daily tiếp theo.";
+  }
+
+  return { stressAnalysis, tips, actionPlan };
+}
 
 export async function POST(request: Request, { params }: RouteContext) {
   try {
@@ -60,56 +139,47 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    // 1. Handle mock mode
-    if (projectId === "demo" || memberId.startsWith("pm-") || memberId === "dev-rag" || memberId === "dev-ui") {
-      const mockResult = mockCoachingData[memberId] || {
-        stressAnalysis: "Thành viên có mức stress ổn định. Workload ở ngưỡng an toàn.",
-        tips: [
-          "Duy trì họp 1-1 hàng tuần để lắng nghe phản hồi.",
-          "Tạo không gian để thành viên tự đề xuất giải pháp kỹ thuật."
-        ],
-        actionPlan: "Tiếp tục theo dõi hiệu suất và phản hồi trong cuộc họp tiếp theo."
-      };
-      return Response.json({ ...mockResult, mode: "mock" });
+    // 1. Fetch live database data or fall back to mock identity properties
+    let user: UserRow | null = null;
+    let name = "Thành viên";
+    let activeTasksCount = 0;
+    let workloadPercentage = 0;
+    let activeTasksStr = "";
+
+    if (access) {
+      const { data: userRow } = await access.supabase
+        .from("users")
+        .select("id,name,email,skills,eq_answers,eq_summary")
+        .eq("id", memberId)
+        .maybeSingle();
+
+      if (userRow) {
+        user = userRow as UserRow;
+        name = user.name || user.email?.split("@")[0] || user.id.slice(0, 8);
+
+        const { data: taskRows } = await access.supabase
+          .from("tasks")
+          .select("title,status,priority")
+          .eq("project_id", projectId)
+          .eq("assignee_id", memberId)
+          .neq("status", "done");
+
+        activeTasksCount = (taskRows ?? []).length;
+        workloadPercentage = Math.min(100, activeTasksCount * 20);
+        activeTasksStr = (taskRows ?? [])
+          .map((t) => `- [${t.priority}] ${t.title} (${t.status})`)
+          .join("\n");
+      }
     }
 
-    const supabase = access.supabase;
-    if (!supabase) {
-      throw new Error("Không thể kết nối dữ liệu project.");
-    }
-
-    // 2. Fetch live database data
-    // Fetch member details
-    const { data: userRow, error: userError } = await supabase
-      .from("users")
-      .select("id,name,email,skills,eq_answers,eq_summary")
-      .eq("id", memberId)
-      .maybeSingle();
-
-    if (userError || !userRow) {
+    if (!user) {
       return Response.json({ error: "Không tìm thấy thông tin thành viên." }, { status: 404 });
     }
 
-    const user = userRow as UserRow;
-    const name = user.name || user.email?.split("@")[0] || user.id.slice(0, 8);
+    let stressAnalysis = "";
+    let tips: string[] = [];
+    let actionPlan = "";
 
-    // Fetch active tasks for this member
-    const { data: taskRows } = await supabase
-      .from("tasks")
-      .select("title,status,priority")
-      .eq("project_id", projectId)
-      .eq("assignee_id", memberId)
-      .neq("status", "done");
-
-    const activeTasks = (taskRows ?? []).map((t) => `- [${t.priority}] ${t.title} (${t.status})`).join("\n");
-    const workloadPercentage = Math.min(100, (taskRows ?? []).length * 20);
-
-    let stressAnalysis = `Thành viên ${name} đang chịu tải ${workloadPercentage}% với ${(taskRows ?? []).length} task đang mở.`;
-    let tips = [
-      "Họp ngắn để tháo gỡ khó khăn về mặt kỹ thuật.",
-      "Động viên và hỏi thăm sức khỏe định kỳ."
-    ];
-    let actionPlan = "Họp 1-1 tháo gỡ blocker.";
     let processed = false;
 
     // 3. Call OpenAI for live coaching tips if key is present
@@ -138,7 +208,7 @@ export async function POST(request: Request, { params }: RouteContext) {
                 eq_answers: user.eq_answers || {},
                 eq_summary: user.eq_summary || {},
                 workload_load: `${workloadPercentage}%`,
-                active_tasks: activeTasks || "Không có task chưa xong",
+                active_tasks: activeTasksStr || "Không có task chưa xong",
               }),
             },
           ],
@@ -177,6 +247,20 @@ export async function POST(request: Request, { params }: RouteContext) {
       } catch (err) {
         console.error("OpenAI call in eq-radar/coaching failed", err);
       }
+    }
+
+    // 3. Fallback response generated programmatically
+    if (!processed) {
+      const fallbackReport = generateDynamicCoaching(
+        name,
+        user.skills || [],
+        activeTasksCount,
+        workloadPercentage,
+        (user.eq_answers as Record<string, string>) || {},
+      );
+      stressAnalysis = fallbackReport.stressAnalysis;
+      tips = fallbackReport.tips;
+      actionPlan = fallbackReport.actionPlan;
     }
 
     return Response.json({

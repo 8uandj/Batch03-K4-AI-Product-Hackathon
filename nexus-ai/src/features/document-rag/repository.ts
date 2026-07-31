@@ -77,9 +77,8 @@ export async function listDocumentSources(
 
   const { data, error } = await getSupabaseAdmin()
     .from("documents")
-    .select("source_id,filename,metadata,created_at")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false });
+    .select("source_id,filename,metadata")
+    .eq("project_id", projectId);
 
   if (error) throw new Error(`Không thể tải danh sách tài liệu: ${error.message}`);
 
@@ -88,7 +87,6 @@ export async function listDocumentSources(
     source_id: string;
     filename: string;
     metadata: { mimeType?: string; totalChunks?: number } | null;
-    created_at: string | null;
   }>) {
     if (sources.has(row.source_id)) continue;
 
@@ -97,7 +95,7 @@ export async function listDocumentSources(
       filename: row.filename,
       chunks: row.metadata?.totalChunks ?? 0,
       mimeType: row.metadata?.mimeType ?? "application/octet-stream",
-      createdAt: row.created_at,
+      createdAt: null,
     });
   }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { EQProfile } from '../mockData';
+import { EQProfile } from '../types';
 import { BrainCircuit, Check, X, Loader2 } from 'lucide-react';
 
 interface EQTestModalProps {

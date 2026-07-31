@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { KanbanBoard } from "@/features/kanban-board/components/KanbanBoard";
 import { getKanbanBoardData } from "@/features/kanban-board/data";
@@ -11,6 +11,16 @@ export const dynamic = "force-dynamic";
 
 export default async function BoardPage({ params }: BoardPageProps) {
   const { id } = await params;
+
+  if (id === "demo") {
+    redirect("/project/board");
+  }
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(id)) {
+    notFound();
+  }
+
   const data = await getKanbanBoardData(id);
 
   if (!data) notFound();
