@@ -12,7 +12,7 @@ declare
 begin
   if caller_id is null then raise exception 'Bạn cần đăng nhập để tham gia project.'; end if;
   if not exists (select 1 from public.projects where id = target_project_id) then
-    raise exception 'Không tìm thấy project với UUID này.';
+    raise exception 'Không tìmx thấy project với UUID này.';
   end if;
 
   perform public.ensure_user_profile();
