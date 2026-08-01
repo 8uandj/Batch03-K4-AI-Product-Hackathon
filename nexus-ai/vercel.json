@@ -11,7 +11,7 @@
     },
     {
       "path": "/api/cron/assignment-followups",
-      "schedule": "15 * * * *"
+      "schedule": "15 2 * * *"
     },
     {
       "path": "/api/cron/eq-radar",
