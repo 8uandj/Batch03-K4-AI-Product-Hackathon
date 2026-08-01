@@ -11,5 +11,8 @@ node_modules/
 out/
 *.tsbuildinfo
 
+# Supabase CLI local state
+supabase/.temp/
+
 # System files
 .DS_Store
