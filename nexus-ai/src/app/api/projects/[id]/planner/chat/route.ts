@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { modelFor, persistAgentRun, tokenUsageFromOpenAI } from "@/features/ai/model-router";
 import {
   ProjectAccessError,
   requireProjectAccess,
@@ -247,13 +248,15 @@ export async function POST(request: Request, { params }: RouteContext) {
     let resultMessage = "";
     let updatedTasks: TaskDraft[] = [];
     let processed = false;
+    let tokenUsage = { inputTokens: null as number | null, outputTokens: null as number | null };
+    const startedAt = Date.now();
 
     // 2. Call OpenAI if available
     if (process.env.OPENAI_API_KEY && projectId !== "demo") {
       try {
-        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 15_000, maxRetries: 2 });
         const response = await client.chat.completions.create({
-          model: process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini",
+          model: modelFor("tier1")!,
           temperature: 0.3,
           messages: [
             {
@@ -318,6 +321,7 @@ export async function POST(request: Request, { params }: RouteContext) {
             },
           },
         });
+        tokenUsage = tokenUsageFromOpenAI(response);
 
         const content = response.choices[0]?.message?.content;
         if (content) {
@@ -374,6 +378,18 @@ export async function POST(request: Request, { params }: RouteContext) {
         .eq("status", "suggested");
       if (updateError) throw new Error(updateError.message);
     }
+
+    await persistAgentRun(supabase, {
+      project_id: projectId,
+      agent: "auto_tasking",
+      tier: "tier1",
+      model: processed ? modelFor("tier1") : null,
+      status: processed ? "success" : "fallback",
+      fallback: !processed,
+      latency_ms: Date.now() - startedAt,
+      input_tokens: tokenUsage.inputTokens,
+      output_tokens: tokenUsage.outputTokens,
+    });
 
     return Response.json({
       message: resultMessage,

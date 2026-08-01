@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 
 import OpenAI from "openai";
+import { modelFor, tokenUsageFromOpenAI } from "@/features/ai/model-router";
+import { AutoTaskingAgent, createAgentOrchestrator } from "@/features/ai/orchestrator";
 
 import type {
   AutoTaskingUser,
@@ -9,6 +11,7 @@ import type {
 } from "@/features/kanban-board/types";
 import { ProjectAccessError, requireProjectAccess } from "@/features/workspace/access";
 import type { TaskPriority } from "@/types";
+import { buildPlannerDocumentContext } from "@/features/workspace/planner-validation";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -21,10 +24,18 @@ type TaskDraft = {
   assignee_id: string;
   required_skills: string[];
   due_in_days: number;
+  acceptance_criteria: string;
 };
 
 type ModelResult = {
   tasks: TaskDraft[];
+};
+
+type GeneratedDrafts = {
+  tasks: TaskDraft[];
+  mode: "openai" | "mock";
+  warning?: string;
+  usage?: { inputTokens: number | null; outputTokens: number | null };
 };
 
 type UserRow = {
@@ -53,9 +64,9 @@ function normalizeUsers(value: unknown): AutoTaskingUser[] {
             .filter(Boolean)
             .slice(0, 20)
         : [];
-      return id && name ? { id, name, skills } : null;
+      return id && name ? ({ id, name, skills, workload: typeof user.workload === "number" ? Math.max(0, Math.min(100, user.workload)) : 0 } satisfies AutoTaskingUser) : null;
     })
-    .filter((user): user is AutoTaskingUser => Boolean(user))
+    .filter((user): user is NonNullable<typeof user> => user !== null)
     .slice(0, 30);
 }
 
@@ -144,6 +155,7 @@ function createMockDrafts(users: AutoTaskingUser[], count: number): TaskDraft[] 
         new Set([...template.skills, ...assignee.skills.slice(0, 1)]),
       ).slice(0, 4),
       due_in_days: Math.min(14, index + 2),
+      acceptance_criteria: `Hoàn thành đầu ra của task và được PM kiểm tra theo phạm vi trong project brief.`,
     };
   });
 }
@@ -165,6 +177,7 @@ function validateModelResult(
     return {
       title: String(task.title || "").trim().slice(0, 160),
       description: String(task.description || "").trim().slice(0, 1200),
+      acceptance_criteria: String(task.acceptance_criteria || "").trim().slice(0, 2000),
       priority,
       assignee_id: userIds.has(task.assignee_id)
         ? task.assignee_id
@@ -183,31 +196,23 @@ function validateModelResult(
     };
   });
 
-  if (!tasks.length || tasks.some((task) => !task.title || !task.description)) {
+  if (!tasks.length || tasks.some((task) => !task.title || !task.description || !task.acceptance_criteria)) {
     throw new Error("OpenAI trả về danh sách task không hợp lệ.");
   }
 
   return tasks;
 }
 
-async function generateDrafts(
+async function generateDraftsWithOpenAI(
   users: AutoTaskingUser[],
   documentSummary: string,
   count: number,
 ) {
-  if (!process.env.OPENAI_API_KEY) {
-    return {
-      tasks: createMockDrafts(users, count),
-      mode: "mock" as const,
-      warning:
-        "OPENAI_API_KEY chưa được cấu hình; Nexus đã dùng mock generator và vẫn lưu task vào board.",
-    };
-  }
-
   try {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY chưa được cấu hình");
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 15_000, maxRetries: 2 });
     const response = await client.chat.completions.create({
-      model: process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini",
+      model: modelFor("tier1")!,
       temperature: 0.2,
       messages: [
         {
@@ -249,6 +254,7 @@ async function generateDrafts(
                   properties: {
                     title: { type: "string" },
                     description: { type: "string" },
+                    acceptance_criteria: { type: "string", minLength: 3, maxLength: 2000 },
                     priority: {
                       type: "string",
                       enum: ["low", "medium", "high"],
@@ -271,6 +277,7 @@ async function generateDrafts(
                   required: [
                     "title",
                     "description",
+                    "acceptance_criteria",
                     "priority",
                     "assignee_id",
                     "required_skills",
@@ -291,19 +298,41 @@ async function generateDrafts(
       tasks: validateModelResult(JSON.parse(content), users, count),
       mode: "openai" as const,
       warning: undefined,
+      usage: tokenUsageFromOpenAI(response),
     };
   } catch (error) {
     console.error("[kanban] Auto-Tasking OpenAI failed", {
       errorName: error instanceof Error ? error.name : "UnknownError",
       message: error instanceof Error ? error.message : "Unknown error",
     });
-    return {
-      tasks: createMockDrafts(users, count),
-      mode: "mock" as const,
-      warning:
-        "OpenAI tạm thời không khả dụng; Nexus đã dùng mock generator để không gián đoạn demo.",
-    };
+    throw error;
   }
+}
+
+async function generateDrafts(
+  users: AutoTaskingUser[],
+  documentSummary: string,
+  count: number,
+  options: { db?: unknown; projectId?: string } = {},
+) {
+  const orchestrator = createAgentOrchestrator([
+    new AutoTaskingAgent({
+      run: () => generateDraftsWithOpenAI(users, documentSummary, count),
+      fallback: () => ({
+        tasks: createMockDrafts(users, count),
+        mode: "mock" as const,
+        warning: process.env.OPENAI_API_KEY
+          ? "OpenAI tạm thời không khả dụng; Nexus đã dùng mock generator để không gián đoạn review bản nháp."
+          : "OPENAI_API_KEY chưa được cấu hình; Nexus đã dùng mock generator và lưu bản nháp để PM review.",
+        usage: undefined,
+      }),
+    }),
+  ]);
+  const result = await orchestrator.execute<
+    { users: AutoTaskingUser[]; documentSummary: string; count: number },
+    GeneratedDrafts
+  >("auto_tasking", "tier1", { users, documentSummary, count }, options);
+  return result.data;
 }
 function dueDate(days: number) {
   const value = new Date();
@@ -317,6 +346,7 @@ function mapTask(
     id: string;
     title: string;
     description: string | null;
+    acceptance_criteria: string | null;
     status: "todo" | "doing" | "done";
     priority: TaskPriority;
     assignee_id: string;
@@ -331,6 +361,7 @@ function mapTask(
     id: row.id,
     title: row.title,
     description: row.description,
+    acceptanceCriteria: row.acceptance_criteria,
     status: row.status,
     priority: row.priority,
     assigneeId: row.assignee_id,
@@ -352,7 +383,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       taskCount?: unknown;
     };
     const requestedUsers = normalizeUsers(body.users);
-    const documentSummary =
+    const clientDocumentSummary =
       typeof body.documentSummary === "string"
         ? body.documentSummary.trim().slice(0, 12000)
         : "";
@@ -361,23 +392,12 @@ export async function POST(request: Request, { params }: RouteContext) {
       Math.min(10, Number.isFinite(Number(body.taskCount)) ? Number(body.taskCount) : 6),
     );
 
-    if (documentSummary.length < 30) {
-      return Response.json(
-        { error: "Project brief cần tối thiểu 30 ký tự." },
-        { status: 400 },
-      );
-    }
-    if (!requestedUsers.length) {
-      return Response.json(
-        { error: "Cần ít nhất một thành viên để AI phân công." },
-        { status: 400 },
-      );
-    }
-
     if (projectId === "demo") {
+      if (clientDocumentSummary.length < 30) return Response.json({ error: "Project brief cần tối thiểu 30 ký tự." }, { status: 400 });
+      if (!requestedUsers.length) return Response.json({ error: "Cần ít nhất một thành viên để AI phân công." }, { status: 400 });
       const generated = await generateDrafts(
         requestedUsers,
-        documentSummary,
+        clientDocumentSummary,
         taskCount,
       );
       const now = new Date().toISOString();
@@ -393,6 +413,7 @@ export async function POST(request: Request, { params }: RouteContext) {
             id: randomUUID(),
             title: draft.title,
             description: draft.description,
+            acceptance_criteria: draft.acceptance_criteria,
             status: "todo",
             priority: draft.priority,
             assignee_id: draft.assignee_id,
@@ -425,25 +446,34 @@ export async function POST(request: Request, { params }: RouteContext) {
       throw new Error("Không thể kết nối dữ liệu project.");
     }
 
-    const { data: membershipRows, error: memberError } = await supabase
-      .from("project_members")
-      .select("user_id")
-      .eq("project_id", projectId);
-    if (memberError) throw new Error(memberError.message);
+    const [projectResult, membershipResult, summaryResult, documentsResult, taskResult] = await Promise.all([
+      supabase.from("projects").select("name,description,deadline_at").eq("id", projectId).maybeSingle(),
+      supabase.from("project_members").select("user_id").eq("project_id", projectId),
+      supabase.from("ai_summaries").select("content").eq("project_id", projectId).eq("type", "project_brief").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("documents").select("filename,content").eq("project_id", projectId).order("created_at", { ascending: true }).limit(30),
+      supabase.from("tasks").select("assignee_id,status,due_at").eq("project_id", projectId),
+    ]);
+    if (projectResult.error || membershipResult.error || summaryResult.error || documentsResult.error || taskResult.error) throw new Error(projectResult.error?.message || membershipResult.error?.message || summaryResult.error?.message || documentsResult.error?.message || taskResult.error?.message);
 
-    const memberIds = (membershipRows ?? []).map((member) => member.user_id);
+    const memberIds = (membershipResult.data ?? []).map((member) => member.user_id);
     const { data: userRows, error: userError } = await supabase
       .from("users")
       .select("id,name,email,avatar_url,skills")
       .in("id", memberIds);
     if (userError) throw new Error(userError.message);
 
-    const members: KanbanMember[] = ((userRows ?? []) as UserRow[]).map((user) => ({
+    const taskRows = (taskResult.data ?? []) as Array<{ assignee_id: string; status: string; due_at: string | null }>;
+    const now = Date.now();
+    const members: AutoTaskingUser[] = ((userRows ?? []) as UserRow[]).map((user) => {
+      const assigned = taskRows.filter((task) => task.assignee_id === user.id && task.status !== "done");
+      const overdue = assigned.filter((task) => task.due_at && new Date(task.due_at).getTime() < now).length;
+      return {
       id: user.id,
       name: user.name || user.email?.split("@")[0] || user.id.slice(0, 8),
       skills: user.skills ?? [],
-      avatarUrl: user.avatar_url,
-    }));
+      workload: Math.max(0, Math.min(100, assigned.length * 15 + overdue * 20)),
+      };
+    });
     if (!members.length) {
       return Response.json(
         { error: "Project chưa có thành viên để phân công." },
@@ -451,35 +481,35 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    const generated = await generateDrafts(members, documentSummary, taskCount);
-    const rows = generated.tasks.map((task) => ({
-      project_id: projectId,
-      title: task.title,
-      description: task.description,
-      status: "todo" as const,
-      priority: task.priority,
-      assignee_id: task.assignee_id,
-      required_skills: task.required_skills,
-      due_at: dueDate(task.due_in_days),
-    }));
-    const { data: inserted, error: insertError } = await supabase
-      .from("tasks")
-      .insert(rows)
-      .select(
-        "id,title,description,status,priority,assignee_id,required_skills,due_at,created_at,updated_at",
-      );
-    if (insertError) throw new Error(insertError.message);
+    const project = projectResult.data;
+    const documentSummary = buildPlannerDocumentContext(
+      summaryResult.data?.content,
+      documentsResult.data ?? [],
+      project?.description || "Dự án chưa có project brief.",
+    ) + `\n\n[Deadline dự án] ${project?.deadline_at || "Chưa xác định"}`;
+    if (documentSummary.trim().length < 30) return Response.json({ error: "Project chưa có đủ brief/tài liệu để Auto-Tasking." }, { status: 400 });
 
-    const memberById = new Map(members.map((member) => [member.id, member]));
-    const tasks = (inserted ?? []).map((task) =>
-      mapTask(task, memberById.get(task.assignee_id)!),
-    );
+    const generated = await generateDrafts(members, documentSummary, taskCount, { db: supabase, projectId });
+    const { data: recommendation, error: recommendationError } = await supabase
+      .from("ai_recommendations")
+      .insert({
+        project_id: projectId,
+        type: "task_assignment",
+        title: "Dự thảo Auto-Tasking cần PM duyệt",
+        rationale: "AI đã phân rã project brief; task chỉ được tạo sau khi PM review và approve.",
+        payload: { tasks: generated.tasks, mode: generated.mode, source: "auto_tasking" },
+        status: "suggested",
+      })
+      .select("id")
+      .single();
+    if (recommendationError) throw new Error(recommendationError.message);
 
     return Response.json({
-      tasks,
+      tasks: generated.tasks,
       mode: generated.mode,
       warning: generated.warning,
-      persisted: true,
+      recommendationId: recommendation.id,
+      persisted: false,
     });
   } catch (error) {
     const message =

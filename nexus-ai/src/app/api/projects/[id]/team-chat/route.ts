@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { ProjectAccessError, requireProjectAccess } from "@/features/workspace/access";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -49,11 +49,10 @@ async function getOrCreateTeamRoom(dbClient: any, projectId: string) {
 }
 
 function getDbClient(supabase: any) {
-  try {
-    return createAdminClient();
-  } catch {
-    return supabase;
-  }
+  // Keep normal Team Chat reads/writes on the authenticated client so the
+  // project RLS policies remain an active defense layer. Scheduled workers
+  // have their own CRON route and do not need service-role access here.
+  return supabase;
 }
 
 function getDisplayName(name?: string | null, email?: string | null, fallback = "Thành viên") {
@@ -192,6 +191,9 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     // Special Action: Worker Progress Scan using 100% REAL Supabase data
     if (body.action === "run_worker") {
+      if (role !== "pm") {
+        return NextResponse.json({ error: "Chỉ PM mới có thể chạy worker giám sát tiến độ." }, { status: 403 });
+      }
       const roomId = await getOrCreateTeamRoom(dbClient, projectId);
       if (!roomId) {
         return NextResponse.json({ error: "Không thể kết nối phòng chat." }, { status: 500 });
@@ -244,13 +246,16 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     // Normal message posting
-    const content = body.content?.trim();
+    const rawContent = body.content?.trim() || "";
 
-    if (!content) {
+    if (!rawContent) {
       return NextResponse.json({ error: "Nội dung tin nhắn không được để trống." }, { status: 400 });
     }
+    if (rawContent.length > 4000) {
+      return NextResponse.json({ error: "Tin nhắn không được vượt quá 4.000 ký tự." }, { status: 413 });
+    }
+    const content = rawContent;
 
-    const isAssistant = body.senderType === "assistant";
     // Always attach valid user.id as sender_id to satisfy Supabase RLS policy `sender_id = auth.uid()`
     const senderId = user.id;
 
@@ -260,9 +265,9 @@ export async function POST(request: Request, { params }: RouteContext) {
         message: {
           id: `msg_${Date.now()}`,
           senderId,
-          senderName: isAssistant ? (body.senderName || "Nexus AI Conflict Mediator") : "Bạn (Tôi)",
-          senderRole: isAssistant ? "ai" : (role || "member"),
-          senderType: isAssistant ? "assistant" : "user",
+          senderName: "Bạn (Tôi)",
+          senderRole: role || "member",
+          senderType: "user",
           content,
           createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
@@ -280,7 +285,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       .insert({
         room_id: roomId,
         sender_id: senderId,
-        sender_type: isAssistant ? "assistant" : "user",
+        sender_type: "user",
         content,
       })
       .select("id, sender_id, sender_type, content, created_at")
@@ -292,7 +297,18 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     // 2. Check for AI conflict signal if sent by user and proactively intervene with solutions!
-    if (!isAssistant) {
+    const preferenceResult = await dbClient
+      .from("member_ai_preferences")
+      .select("chat_analysis_enabled")
+      .eq("project_id", projectId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (preferenceResult.error && preferenceResult.error.code !== "42P01") {
+      throw new Error(preferenceResult.error.message);
+    }
+    const chatAnalysisEnabled = preferenceResult.data?.chat_analysis_enabled === true;
+
+    if (chatAnalysisEnabled) {
       const lower = content.toLowerCase();
       const conflictKeywords = [
         "không đồng ý",
@@ -332,12 +348,28 @@ Phát hiện tín hiệu trao đổi căng thẳng / bất đồng ý kiến gi�
 2. 🤝 Solution 2 (Hỗ trợ nguồn lực): Nếu công việc bị tắc nghẽn hoặc quá tải, PM/Leader điều phối 1 thành viên rảnh hỗ trợ gỡ blocker ngay trong Sprint này.
 3. ⏱️ Solution 3 (Giao tiếp 1-1): Tổ chức buổi họp nhanh 10 phút (Quick Sync) trực tiếp giữa 2 bên để chốt phương án cuối cùng mà không ảnh hưởng tiến độ.`;
 
-        await dbClient.from("chat_messages").insert({
+        const conflictMessage = await dbClient.from("chat_messages").insert({
           room_id: roomId,
           sender_id: user.id,
           sender_type: "assistant",
           content: aiSolutionContent,
         });
+        if (conflictMessage.error) throw new Error(conflictMessage.error.message);
+
+        // Store only the derived conflict signal, never raw chat content, and
+        // only after the member has explicitly opted into chat analysis.
+        if (supabase) {
+          const riskEvent = await supabase.rpc("record_risk_event", {
+            target_project_id: projectId,
+            target_user_id: user.id,
+            target_task_id: null,
+            event_type: "conflict",
+            event_severity: "medium",
+            event_summary: "Nexus phát hiện tín hiệu bất đồng trong Team Chat và đã đề xuất cách tháo gỡ.",
+            event_metadata: { source: "opt_in_chat_analysis", privacy: "derived_signal_only" },
+          });
+          if (riskEvent.error) throw new Error(riskEvent.error.message);
+        }
       }
     }
 
@@ -346,8 +378,8 @@ Phát hiện tín hiệu trao đổi căng thẳng / bất đồng ý kiến gi�
       message: {
         id: insertedMsg.id,
         senderId: insertedMsg.sender_id,
-        senderName: isAssistant ? (body.senderName || "Nexus AI Conflict Mediator") : "Bạn (Tôi)",
-        senderRole: isAssistant ? "ai" : (role || "member"),
+        senderName: "Bạn (Tôi)",
+        senderRole: role || "member",
         senderType: insertedMsg.sender_type,
         content: insertedMsg.content,
         createdAt: new Date(insertedMsg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),

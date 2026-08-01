@@ -94,10 +94,18 @@ Array<{
 - `project_id`: uuid nullable -> `projects.id`
 - `title`: text
 - `description`: text nullable
-- `status`: `todo | doing | done`
+- `status`: `todo | doing | rework | done`
 - `priority`: `low | medium | high`
 - `assignee_id`: uuid -> `users.id`
 - `due_at`: timestamptz nullable
+- `origin`: `ai_planned | manual | ad_hoc | rework`
+- `source_type`: `feedback_change | bug_fix | urgent_request | admin_logistics | other`
+- `source_task_id`: uuid nullable; rework/bug source must be a completed task in the same project
+- `created_by`: uuid nullable -> `users.id`
+- `effort_size`: `small | medium | large`
+- `is_urgent`: boolean
+- `acceptance_criteria`: text nullable
+- `blocked_by_task_id`: uuid nullable; dependency must be in the same project
 - `updated_at`, `created_at`: timestamptz
 
 ## Chat contracts
@@ -167,3 +175,38 @@ Tin hieu cho PM Dashboard/EQ Radar.
 - `/project/[id]/chat/bot`: Bot Chat/RAG, document-rag owner.
 - `/project/[id]/board`: Kanban owner.
 - `/pm-dashboard`: Dashboard/EQ Radar owner.
+
+
+## Ad-hoc task and privacy contracts
+
+Tasks may carry origin (ai_planned | manual | ad_hoc | rework), source_type, source_task_id, blocked_by_task_id, effort_size, is_urgent, created_by and acceptance_criteria.
+
+Manual task endpoints:
+
+- POST `/api/projects/:id/tasks`: manual/ad-hoc/rework creation; PM/member policy and risk are rechecked by `create_manual_task`.
+- POST `/api/projects/:id/tasks/assignment-preview`: read-only Smart Delegation preview with phase, weights, candidates, alternatives and forecast impact.
+- POST `/api/projects/:id/tasks/:taskId/reassign`: PM-only reassignment; DB recomputes risk before update.
+- POST `/api/projects/:id/tasks/auto`: creates an AI recommendation draft only; it does not persist tasks.
+- POST `/api/projects/:id/tasks/auto/approve`: PM-only atomic approval; validates assignee, acceptance criteria and writes task activity.
+- GET/PATCH `/api/projects/:id/privacy`: preferences plus the member's aggregate behavioral data window.
+- DELETE /api/projects/:id/privacy deletes only the authenticated member's behavioral aggregates for that project.
+- GET/PATCH /api/projects/:id/settings (`allowMemberTaskCreation`, PM-only update)
+
+assignment_decisions records project phase, weights, candidate evidence, selected assignee, override reason and mitigation. Late-night activity is an aggregate task-update signal; it is not online tracking. Chat analysis is disabled unless the member opts in.
+
+## Agent orchestration
+
+Server-only agents use `AgentOrchestrator` and the shared `ModelRouter`:
+
+- `KnowledgeHubAgent`, `AutoTaskingAgent`: Tier 1.
+- `DeadlineCopilotAgent`, `EqRadarAgent`: Tier 2.
+- Every execution returns fallback/model/latency metadata and attempts an `agent_runs` audit without breaking the user flow.
+
+## Deadline notification inbox
+
+- `GET /api/notifications`: returns only notifications belonging to the authenticated user.
+- `PATCH /api/notifications` with `{ id }` or `{ all: true }`: marks own notifications as read.
+- Notifications include `tone`, `trigger_reason`, and `action_link`; raw late-night activity is never returned.
+- Deadline Monitor scans overdue, stale Doing (48h+) and blocker/support activity; duplicate notifications are deduplicated by task, recipient, kind and notification day.
+- `/api/cron/assignment-followups` delivers a private member follow-up 24 hours after a high/critical force-assign override.
+- A high/critical PM override also creates a same-day private `force_assign_warning`; the warning and the 24-hour follow-up never expose raw late-night timestamps.

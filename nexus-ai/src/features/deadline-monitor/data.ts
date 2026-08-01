@@ -8,6 +8,8 @@ export type DeadlineBotNotification = {
   content: string;
   overdueHours: number;
   createdAt: string;
+  tone: "gentle" | "neutral" | "urgent";
+  actionLink: string | null;
 };
 
 type NotificationRow = {
@@ -17,6 +19,8 @@ type NotificationRow = {
   content: string;
   overdue_hours: number;
   created_at: string;
+  tone?: "gentle" | "neutral" | "urgent";
+  action_link?: string | null;
 };
 
 export async function getDeadlineBotNotifications(
@@ -27,7 +31,7 @@ export async function getDeadlineBotNotifications(
 
   const { data, error } = await access.supabase
     .from("deadline_notifications")
-    .select("id,task_id,kind,content,overdue_hours,created_at")
+    .select("id,task_id,kind,content,overdue_hours,created_at,tone,action_link")
     .eq("project_id", projectId)
     .eq("recipient_user_id", access.user.id)
     .order("created_at", { ascending: false })
@@ -45,5 +49,7 @@ export async function getDeadlineBotNotifications(
     content: notification.content,
     overdueHours: notification.overdue_hours,
     createdAt: notification.created_at,
+    tone: notification.tone ?? "neutral",
+    actionLink: notification.action_link ?? `/project/${projectId}/board?task=${notification.task_id}`,
   }));
 }

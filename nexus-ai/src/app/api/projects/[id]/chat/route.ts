@@ -4,6 +4,7 @@ import { streamText } from "ai";
 import { ragConfig } from "@/features/document-rag/config";
 import { buildMockAnswer, buildRagSystemPrompt } from "@/features/document-rag/prompt";
 import { retrieveContext } from "@/features/document-rag/repository";
+import { persistAgentRun } from "@/features/ai/model-router";
 import { ProjectAccessError, requireProjectAccess } from "@/features/workspace/access";
 
 export const runtime = "nodejs";
@@ -36,7 +37,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       message?: string;
       history?: IncomingMessage[];
     };
-    const message = body.message?.trim();
+    const message = typeof body.message === "string" ? body.message.trim().slice(0, 4000) : "";
 
     if (!message) {
       return Response.json({ error: "Câu hỏi không được để trống." }, { status: 400 });
@@ -64,12 +65,50 @@ export async function POST(request: Request, { params }: RouteContext) {
       });
     }
 
-    const history = (body.history ?? []).slice(-6);
+    const history = (Array.isArray(body.history) ? body.history : [])
+      .filter((item) => Boolean(item) && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
+      .slice(-6)
+      .map((item) => ({ role: item.role, content: item.content.trim().slice(0, 4000) }))
+      .filter((item) => item.content.length > 0);
+    const startedAt = Date.now();
+    const persistChatRun = async (payload: {
+      status: "success" | "error";
+      inputTokens?: number | null;
+      outputTokens?: number | null;
+      error?: string | null;
+    }) => {
+      await persistAgentRun(supabase, {
+        project_id: projectId === "demo" ? null : projectId,
+        agent: "knowledge",
+        tier: "tier2",
+        model: ragConfig.chatModel,
+        status: payload.status,
+        fallback: false,
+        latency_ms: Date.now() - startedAt,
+        input_tokens: payload.inputTokens ?? null,
+        output_tokens: payload.outputTokens ?? null,
+        error: payload.error ?? null,
+      });
+    };
+
     const result = streamText({
       model: openai(ragConfig.chatModel),
       system: buildRagSystemPrompt(sources, projectName),
       messages: [...history, { role: "user", content: message }],
       temperature: 0.2,
+      onFinish: async ({ usage }) => {
+        await persistChatRun({
+          status: "success",
+          inputTokens: usage.inputTokens ?? null,
+          outputTokens: usage.outputTokens ?? null,
+        });
+      },
+      onError: async ({ error }) => {
+        await persistChatRun({
+          status: "error",
+          error: error instanceof Error ? error.message : "RAG stream failed",
+        });
+      },
     });
 
     return result.toTextStreamResponse({

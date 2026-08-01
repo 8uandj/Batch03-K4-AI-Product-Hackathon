@@ -9,14 +9,6 @@ import {
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-function dueDate(days: number) {
-  const value = new Date();
-  value.setUTCDate(value.getUTCDate() + days);
-  // Set due time to end of day: 16:59:00 UTC (which is 23:59:00 in UTC+7 / Indochina time)
-  value.setUTCHours(16, 59, 0, 0);
-  return value.toISOString();
-}
-
 export async function POST(request: Request, { params }: RouteContext) {
   try {
     const { id: projectId } = await params;
@@ -84,60 +76,23 @@ export async function POST(request: Request, { params }: RouteContext) {
       { maxDueDays: deadlineDays },
     );
 
-    // Claim the draft before inserting. The conditional update makes retries
-    // idempotent and prevents two concurrent approvals from duplicating tasks.
-    const { data: claimedRecommendation, error: claimError } = await supabase
-      .from("ai_recommendations")
-      .update({
-        status: "accepted",
-        payload: { tasks: finalTasks, deadlineDays, mode: "approved" },
-      })
-      .eq("id", body.recommendationId)
-      .eq("project_id", projectId)
-      .eq("type", "task_assignment")
-      .eq("status", "suggested")
-      .select("id")
-      .maybeSingle();
-
-    if (claimError) throw new Error(claimError.message);
-    if (!claimedRecommendation) {
-      return Response.json(
-        { error: "Bản nháp không tồn tại hoặc đã được phê duyệt trước đó." },
-        { status: 409 },
-      );
-    }
-
-    // Map validated tasks to database schema
-    const taskRows = finalTasks.map((task) => ({
-      project_id: projectId,
-      title: task.title.trim().slice(0, 160),
-      description: task.description?.trim().slice(0, 1200) || null,
-      status: "todo" as const,
-      priority: task.priority,
-      assignee_id: task.assignee_id,
-      required_skills: task.required_skills,
-      due_at: dueDate(task.due_in_days),
-    }));
-
-    // Insert tasks in database
-    const { error: insertError } = await supabase
-      .from("tasks")
-      .insert(taskRows);
-
-    if (insertError) {
-      // Release the claim so the PM can retry after a transient database error.
-      await supabase
-        .from("ai_recommendations")
-        .update({ status: "suggested" })
-        .eq("id", body.recommendationId)
-        .eq("project_id", projectId)
-        .eq("status", "accepted");
-      throw new Error(insertError.message);
+    const approved = await supabase.rpc("approve_planner_draft", {
+      target_project_id: projectId,
+      recommendation_id: body.recommendationId,
+      approved_tasks: finalTasks,
+    });
+    if (approved.error) {
+      if (approved.error.code === "P0002") return Response.json({ error: "Bản nháp không tồn tại hoặc đã được phê duyệt trước đó." }, { status: 409 });
+      if (approved.error.code === "42501") return Response.json({ error: approved.error.message }, { status: 403 });
+      if (approved.error.code === "23514") return Response.json({ error: approved.error.message }, { status: 400 });
+      throw new Error(approved.error.message);
     }
 
     return Response.json({
       success: true,
-      count: finalTasks.length,
+      count: approved.data?.length ?? 0,
+      tasks: approved.data ?? [],
+      persisted: true,
     });
   } catch (error) {
     const status =

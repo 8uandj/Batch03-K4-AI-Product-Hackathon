@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import OpenAI from "openai";
+import { modelFor, persistAgentRun, tokenUsageFromOpenAI } from "@/features/ai/model-router";
 import {
   ProjectAccessError,
   requireProjectAccess,
@@ -254,13 +255,15 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     let tasks: TaskDraft[] = [];
     let mode: "openai" | "mock" = "mock";
+    let tokenUsage = { inputTokens: null as number | null, outputTokens: null as number | null };
+    const startedAt = Date.now();
 
     // 3. Call OpenAI if API key exists, otherwise fall back to mock
     if (process.env.OPENAI_API_KEY && projectId !== "demo") {
       try {
-        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 15_000, maxRetries: 2 });
         const response = await client.chat.completions.create({
-          model: process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini",
+          model: modelFor("tier1")!,
           temperature: 0.2,
           messages: [
             {
@@ -322,6 +325,7 @@ export async function POST(request: Request, { params }: RouteContext) {
             },
           },
         });
+        tokenUsage = tokenUsageFromOpenAI(response);
 
         const content = response.choices[0]?.message?.content;
         if (content) {
@@ -347,6 +351,18 @@ export async function POST(request: Request, { params }: RouteContext) {
       members.map((member) => member.id),
       { maxDueDays: deadlineDays },
     );
+
+    await persistAgentRun(supabase, {
+      project_id: projectId,
+      agent: "auto_tasking",
+      tier: "tier1",
+      model: mode === "openai" ? modelFor("tier1") : null,
+      status: mode === "openai" ? "success" : "fallback",
+      fallback: mode !== "openai",
+      latency_ms: Date.now() - startedAt,
+      input_tokens: tokenUsage.inputTokens,
+      output_tokens: tokenUsage.outputTokens,
+    });
 
     // 4. Save recommendation as suggested draft (only in database mode)
     let recommendationId = randomUUID();

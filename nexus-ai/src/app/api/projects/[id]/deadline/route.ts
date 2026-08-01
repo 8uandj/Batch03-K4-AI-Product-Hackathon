@@ -6,7 +6,14 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   try {
     const { id: projectId } = await params;
     const body = (await request.json()) as { deadlineAt: string | null };
-    const deadlineAt = body.deadlineAt ? new Date(body.deadlineAt).toISOString() : null;
+    if (body.deadlineAt !== null && typeof body.deadlineAt !== "string") {
+      return Response.json({ error: "deadlineAt phải là ISO date hoặc null." }, { status: 400 });
+    }
+    const parsedDeadline = body.deadlineAt ? new Date(body.deadlineAt) : null;
+    if (parsedDeadline && Number.isNaN(parsedDeadline.getTime())) {
+      return Response.json({ error: "deadlineAt không hợp lệ." }, { status: 400 });
+    }
+    const deadlineAt = parsedDeadline ? parsedDeadline.toISOString() : null;
 
     const access = await requireProjectAccess(projectId);
     if (access.role !== "pm") {

@@ -15,7 +15,16 @@ export type RiskSeverity = 'low' | 'medium' | 'high';
 export type TaskPriority = 'low' | 'medium' | 'high';
 export type DeadlineNotificationKind =
   | 'assignee_check_in'
-  | 'leader_escalation';
+  | 'leader_escalation'
+  | 'force_assign_followup'
+  | 'force_assign_warning';
+export type TaskOrigin = 'ai_planned' | 'manual' | 'ad_hoc' | 'rework';
+export type TaskSourceType = 'feedback_change' | 'bug_fix' | 'urgent_request' | 'admin_logistics' | 'other';
+export type TaskEffortSize = 'small' | 'medium' | 'large';
+export type AssignmentPhase = 'normal' | 'sprint' | 'emergency';
+export type AssignmentRisk = 'low' | 'moderate' | 'high' | 'critical';
+export type AgentName = 'knowledge' | 'auto_tasking' | 'deadline' | 'eq_radar';
+export type ModelTier = 'tier1' | 'tier2' | 'rule';
 
 export type Json =
   | string
@@ -49,6 +58,7 @@ export interface Project {
   owner_id: string;
   status: ProjectStatus;
   deadline_at: string | null;
+  allow_member_task_creation: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -93,7 +103,98 @@ export interface Task {
   assignee_id: string;
   required_skills: string[];
   due_at: string | null;
+  origin: TaskOrigin;
+  source_type: TaskSourceType | null;
+  source_task_id: string | null;
+  created_by: string | null;
+  effort_size: TaskEffortSize;
+  is_urgent: boolean;
+  acceptance_criteria: string | null;
+  blocked_by_task_id?: string | null;
   updated_at: string;
+  created_at: string;
+}
+
+export interface TaskActivityEvent {
+  id: string;
+  project_id: string;
+  task_id: string;
+  actor_id: string | null;
+  event_type: string;
+  from_value: string | null;
+  to_value: string | null;
+  metadata: Json;
+  occurred_at: string;
+}
+
+export interface AssignmentDecision {
+  id: string;
+  project_id: string;
+  task_id: string | null;
+  actor_id: string;
+  suggested_user_id: string | null;
+  selected_user_id: string | null;
+  project_phase: AssignmentPhase;
+  risk_level: AssignmentRisk;
+  weights: Json;
+  evidence: Json;
+  override_reason: string | null;
+  mitigation: string | null;
+  created_at: string;
+}
+
+export interface AgentRun {
+  id: string;
+  project_id: string | null;
+  agent: string;
+  tier: "tier1" | "tier2" | "rule";
+  model: string | null;
+  status: "success" | "fallback" | "error";
+  latency_ms: number | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  fallback: boolean;
+  error: string | null;
+  created_at: string;
+}
+
+export interface MemberActivityDaily {
+  id: string;
+  project_id: string;
+  user_id: string;
+  activity_date: string;
+  open_tasks: number;
+  doing_tasks: number;
+  overdue_tasks: number;
+  stale_doing_tasks: number;
+  reminder_count: number;
+  completed_tasks: number;
+  late_night_updates: number;
+  created_at: string;
+}
+
+export interface MemberAiPreference {
+  user_id: string;
+  project_id: string;
+  behavioral_insights_enabled: boolean;
+  late_night_signal_enabled: boolean;
+  chat_analysis_enabled: boolean;
+  timezone: string;
+  updated_at: string;
+}
+
+export interface AssignmentFollowup {
+  id: string;
+  project_id: string;
+  task_id: string;
+  member_id: string;
+  created_by: string;
+  override_reason: string;
+  mitigation: string;
+  due_at: string;
+  notified_at: string | null;
+  status: "open" | "resolved";
+  resolved_at: string | null;
   created_at: string;
 }
 
@@ -159,6 +260,9 @@ export interface DeadlineNotification {
   content: string;
   overdue_hours: number;
   notification_day: string;
+  tone: "gentle" | "neutral" | "urgent";
+  trigger_reason: string;
+  action_link: string | null;
   read_at: string | null;
   created_at: string;
 }
@@ -187,7 +291,7 @@ export type Database = {
       >;
       projects: TableDefinition<
         Project,
-        OptionalGenerated<Project, 'id' | 'status' | 'deadline_at' | 'created_at' | 'updated_at'>,
+        OptionalGenerated<Project, 'id' | 'status' | 'deadline_at' | 'allow_member_task_creation' | 'created_at' | 'updated_at'>,
         Partial<Omit<Project, 'id'>>,
         [
           {
@@ -252,10 +356,10 @@ export type Database = {
         ]
       >;
       tasks: TableDefinition<
-        Task,
-        OptionalGenerated<
           Task,
-          'id' | 'project_id' | 'description' | 'status' | 'priority' | 'required_skills' | 'due_at' | 'updated_at' | 'created_at'
+          OptionalGenerated<
+            Task,
+          'id' | 'project_id' | 'description' | 'status' | 'priority' | 'required_skills' | 'due_at' | 'origin' | 'source_type' | 'source_task_id' | 'created_by' | 'effort_size' | 'is_urgent' | 'acceptance_criteria' | 'blocked_by_task_id' | 'updated_at' | 'created_at'
         >,
         Partial<Omit<Task, 'id'>>,
         [
@@ -275,6 +379,12 @@ export type Database = {
           },
         ]
       >;
+      task_activity_events: TableDefinition<TaskActivityEvent, Partial<Omit<TaskActivityEvent, 'id' | 'occurred_at'>>, Partial<Omit<TaskActivityEvent, 'id'>>>;
+      assignment_decisions: TableDefinition<AssignmentDecision, Partial<Omit<AssignmentDecision, 'id' | 'created_at'>>, Partial<Omit<AssignmentDecision, 'id'>>>;
+      agent_runs: TableDefinition<AgentRun, Partial<Omit<AgentRun, 'id' | 'created_at'>>, Partial<Omit<AgentRun, 'id'>>>;
+      member_activity_daily: TableDefinition<MemberActivityDaily, Partial<Omit<MemberActivityDaily, 'id' | 'created_at'>>, Partial<Omit<MemberActivityDaily, 'id'>>>;
+      member_ai_preferences: TableDefinition<MemberAiPreference, MemberAiPreference, Partial<MemberAiPreference>>;
+      assignment_followups: TableDefinition<AssignmentFollowup, Partial<Omit<AssignmentFollowup, 'id' | 'created_at'>>, Partial<Omit<AssignmentFollowup, 'id'>>>;
       chat_rooms: TableDefinition<
         ChatRoom,
         OptionalGenerated<ChatRoom, 'id' | 'created_at'>,
@@ -477,6 +587,61 @@ export type Database = {
           content: string;
           similarity: number;
         }>;
+      };
+      create_manual_task: {
+        Args: { target_project_id: string; task_title: string; task_description?: string | null; task_priority: TaskPriority; target_assignee_id: string; task_skills?: string[]; task_due_at?: string | null; dependency_task_id?: string | null; task_origin: TaskOrigin; task_source_type?: TaskSourceType | null; source_task_id?: string | null; task_effort_size: TaskEffortSize; task_is_urgent: boolean; task_acceptance_criteria?: string | null; decision_input?: Json };
+        Returns: Task[];
+      };
+      approve_auto_tasking_draft: {
+        Args: { target_project_id: string; recommendation_id: string; approved_tasks: Json };
+        Returns: Task[];
+      };
+      reassign_task: {
+        Args: { target_project_id: string; target_task_id: string; target_assignee_id: string; decision_input?: Json };
+        Returns: Task[];
+      };
+      update_task_status: {
+        Args: { target_project_id: string; target_task_id: string; next_status: TaskStatus };
+        Returns: Task[];
+      };
+      record_task_action: {
+        Args: { target_project_id: string; target_task_id: string; action: "blocker_reported" | "support_requested"; note?: string | null };
+        Returns: boolean;
+      };
+      respond_assignment_followup: {
+        Args: { target_project_id: string; target_task_id: string; response_note?: string | null };
+        Returns: boolean;
+      };
+      approve_planner_draft: {
+        Args: { target_project_id: string; recommendation_id: string; approved_tasks: Json };
+        Returns: Task[];
+      };
+      record_agent_run: {
+        Args: {
+          run_project_id?: string | null;
+          run_agent: AgentName;
+          run_tier: ModelTier;
+          run_model?: string | null;
+          run_status?: 'success' | 'fallback' | 'error';
+          run_latency_ms?: number | null;
+          run_input_tokens?: number | null;
+          run_output_tokens?: number | null;
+          run_fallback?: boolean;
+          run_error?: string | null;
+        };
+        Returns: string;
+      };
+      record_risk_event: {
+        Args: {
+          target_project_id: string;
+          target_user_id?: string | null;
+          target_task_id?: string | null;
+          event_type?: RiskEventType;
+          event_severity?: RiskSeverity;
+          event_summary?: string;
+          event_metadata?: Json;
+        };
+        Returns: string;
       };
     };
     Enums: Record<string, never>;

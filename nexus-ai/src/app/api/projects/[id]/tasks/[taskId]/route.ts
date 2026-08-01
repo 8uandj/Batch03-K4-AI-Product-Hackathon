@@ -1,4 +1,3 @@
-import { validateKanbanTransition } from "@/features/kanban-board/transitions";
 import { ProjectAccessError, requireProjectAccess } from "@/features/workspace/access";
 import type { TaskStatus } from "@/types";
 
@@ -11,7 +10,22 @@ const allowedStatuses: TaskStatus[] = ["todo", "doing", "rework", "done"];
 export async function PATCH(request: Request, { params }: RouteContext) {
   try {
     const { id: projectId, taskId } = await params;
-    const body = (await request.json()) as { status?: string };
+    const body = (await request.json()) as { status?: string; action?: "blocker_reported" | "support_requested"; note?: string };
+
+    if (body.action) {
+      if (projectId === "demo") return Response.json({ success: true, persisted: false, action: body.action });
+      const { supabase } = await requireProjectAccess(projectId);
+      if (!supabase) throw new Error("Không thể kết nối dữ liệu project.");
+      const note = typeof body.note === "string" ? body.note.trim().slice(0, 500) : "";
+      const actionResult = await supabase.rpc("record_task_action", { target_project_id: projectId, target_task_id: taskId, action: body.action, note: note || null });
+      if (actionResult.error) {
+        if (actionResult.error.code === "P0002") return Response.json({ error: "Không tìm thấy task trong project này." }, { status: 404 });
+        if (actionResult.error.code === "42501") return Response.json({ error: actionResult.error.message }, { status: 403 });
+        throw new Error(actionResult.error.message);
+      }
+      return Response.json({ success: true, persisted: true, action: body.action });
+    }
+
     const status = body.status as TaskStatus;
 
     if (!allowedStatuses.includes(status)) {
@@ -28,73 +42,23 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       });
     }
 
-    const { role, supabase } = await requireProjectAccess(projectId);
+    const { supabase } = await requireProjectAccess(projectId);
     if (!supabase) {
       throw new Error("Không thể kết nối dữ liệu project.");
     }
 
-    const { data: currentTask, error: taskError } = await supabase
-      .from("tasks")
-      .select("id,status")
-      .eq("id", taskId)
-      .eq("project_id", projectId)
-      .maybeSingle();
-
-    if (taskError) throw new Error(taskError.message);
-    if (!currentTask) {
-      return Response.json(
-        { error: "Không tìm thấy task trong project này." },
-        { status: 404 },
-      );
-    }
-
-    const transition = validateKanbanTransition({
-      currentStatus: currentTask.status as TaskStatus,
-      nextStatus: status,
-      role,
+    const result = await supabase.rpc("update_task_status", {
+      target_project_id: projectId,
+      target_task_id: taskId,
+      next_status: status,
     });
-
-    if (!transition.allowed) {
-      return Response.json(
-        { error: transition.message },
-        { status: transition.code === "pm_required" ? 403 : 409 },
-      );
+    if (result.error) {
+      if (result.error.code === "P0002") return Response.json({ error: "Không tìm thấy task trong project này." }, { status: 404 });
+      if (result.error.code === "42501") return Response.json({ error: result.error.message }, { status: 403 });
+      if (result.error.code === "23514") return Response.json({ error: result.error.message }, { status: 409 });
+      throw new Error(result.error.message);
     }
-
-    const updatedAt = new Date().toISOString();
-    const { data, error } = await supabase
-      .from("tasks")
-      .update({ status, updated_at: updatedAt })
-      .eq("id", taskId)
-      .eq("project_id", projectId)
-      .select("id,status,updated_at")
-      .maybeSingle();
-
-    if (error) {
-      if (
-        error.message.includes("tasks_status_check") ||
-        error.message.includes("violates check constraint") ||
-        error.code === "23514"
-      ) {
-        return Response.json(
-          {
-            error:
-              "Supabase chưa áp dụng migration Rework. Trạng thái task chưa được thay đổi.",
-          },
-          { status: 503 },
-        );
-      }
-      throw new Error(error.message);
-    }
-
-    if (!data) {
-      return Response.json(
-        { error: "Không tìm thấy task trong project này." },
-        { status: 404 },
-      );
-    }
-
-    return Response.json({ task: data, persisted: true });
+    return Response.json({ task: result.data?.[0] ?? null, persisted: true });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Không thể cập nhật task.";

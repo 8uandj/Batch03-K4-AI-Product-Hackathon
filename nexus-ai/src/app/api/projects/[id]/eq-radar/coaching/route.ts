@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { modelFor, persistAgentRun, tokenUsageFromOpenAI } from "@/features/ai/model-router";
 
 import {
   buildFallbackCoaching,
@@ -72,8 +73,14 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
-    const [{ data: userRow, error: userError }, { data: taskRows, error: taskError }] =
+    const [{ data: membership, error: membershipError }, { data: userRow, error: userError }, { data: taskRows, error: taskError }] =
       await Promise.all([
+        supabase
+          .from("project_members")
+          .select("user_id")
+          .eq("project_id", projectId)
+          .eq("user_id", memberId)
+          .maybeSingle(),
         supabase
           .from("users")
           .select("id,name,email,skills,eq_answers")
@@ -87,6 +94,12 @@ export async function POST(request: Request, { params }: RouteContext) {
           .neq("status", "done"),
       ]);
 
+    if (membershipError) {
+      throw new Error(`Không thể kiểm tra thành viên project: ${membershipError.message}`);
+    }
+    if (!membership) {
+      return Response.json({ error: "Thành viên không thuộc project này." }, { status: 400 });
+    }
     if (userError) {
       throw new Error(`Không thể tải hồ sơ thành viên: ${userError.message}`);
     }
@@ -119,12 +132,14 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     let coaching = fallbackCoaching;
     let mode: "openai" | "fallback" = "fallback";
+    let tokenUsage = { inputTokens: null as number | null, outputTokens: null as number | null };
+    const startedAt = Date.now();
 
     if (process.env.OPENAI_API_KEY) {
       try {
-        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 15_000, maxRetries: 2 });
         const response = await client.chat.completions.create({
-          model: process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini",
+          model: modelFor("tier2")!,
           temperature: 0.2,
           messages: [
             {
@@ -205,6 +220,7 @@ export async function POST(request: Request, { params }: RouteContext) {
             },
           },
         });
+        tokenUsage = tokenUsageFromOpenAI(response);
 
         const content = response.choices[0]?.message?.content;
         const parsed = content ? (JSON.parse(content) as unknown) : null;
@@ -216,6 +232,18 @@ export async function POST(request: Request, { params }: RouteContext) {
         console.error("OpenAI call in eq-radar/coaching failed", error);
       }
     }
+
+    await persistAgentRun(supabase, {
+      project_id: projectId,
+      agent: "eq_radar",
+      tier: "tier2",
+      model: mode === "openai" ? modelFor("tier2") : null,
+      status: mode === "openai" ? "success" : "fallback",
+      fallback: mode !== "openai",
+      latency_ms: Date.now() - startedAt,
+      input_tokens: tokenUsage.inputTokens,
+      output_tokens: tokenUsage.outputTokens,
+    });
 
     return Response.json({
       personalityAnalysis,
