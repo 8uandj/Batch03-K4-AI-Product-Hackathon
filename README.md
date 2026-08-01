@@ -2,6 +2,8 @@
 
 Nexus AI là trợ lý lập kế hoạch có kiểm soát cho PM của team dự án ngắn hạn. Lát cắt nộp bài tập trung vào Auto-Tasking: từ project brief hoặc đoạn trao đổi, hệ thống quyết định đề xuất task, hỏi lại khi thiếu dữ kiện hoặc từ chối yêu cầu vượt quyền; PM luôn sửa và duyệt trước khi task vào Kanban.
 
+Link sản phẩm: https://nexus-ai-ebon-eight.vercel.app/
+
 ## Thành viên và phân công
 
 | Mã HV | Thành viên | Phần phụ trách |
@@ -146,5 +148,3 @@ Dữ liệu trong `data/` là dữ liệu thật của khoá học (đã ẩn da
 6. Sau sự kiện, **xoá các bản sao data pack** khỏi máy cá nhân và các công cụ đã upload nếu ban tổ chức yêu cầu.
 
 Vi phạm được xử lý theo quy định của khoá và có thể ảnh hưởng trực tiếp đến điểm của nhóm.
-
-https://docs.google.com/document/d/1FpViaW2A7pspszEqDaWgVWRW_udgXOWYZ8uVEHU5rl0/edit?usp=sharing
