@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { RagWorkspace } from "@/features/document-rag/components/RagWorkspace";
 import { getCurrentUserProjects } from "@/features/workspace/data";
+import { BackButton } from "@/components/shared/BackButton";
 
 type ProjectDocumentsPageProps = {
   params: Promise<{ id: string }>;
@@ -24,11 +25,11 @@ export default async function ProjectDocumentsPage({
   const projectName =
     projects.find((project) => project.id === id)?.name ?? "Project";
 
-  return (
+  return (<>
+    <BackButton fallback={`/project/${id}`} />
     <RagWorkspace
       projectId={id}
       projectName={projectName}
       projects={projects}
-    />
-  );
+    /></>);
 }

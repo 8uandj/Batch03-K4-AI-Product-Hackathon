@@ -24,13 +24,15 @@ chỉ nằm trong bộ nhớ tiến trình.
 4. Khởi động lại ứng dụng.
 
 Service-role key chỉ được đọc trong Route Handler phía server, không bao giờ đưa
-vào biến `NEXT_PUBLIC_*`.
+vào biến `NEXT_PUBLIC_*`. Production RAG bắt buộc phải có
+`SUPABASE_SERVICE_ROLE_KEY`; publishable/anon key không được dùng để index hoặc
+retrieve tài liệu.
 
 ## API contract
 
 ### `POST /api/projects/:id/documents`
 
-Multipart form với field `file`. Hỗ trợ PDF/TXT/MD/CSV/JSON, tối đa 10 MB.
+Multipart form với field `file`. Hỗ trợ PDF/DOCX/TXT/MD/CSV/JSON, tối đa 10 MB.
 
 ```json
 {
@@ -62,8 +64,9 @@ xuất để UI hiển thị trace.
 
 ## Điểm tích hợp do PM/infra phụ trách
 
-- Route hiện nhận `projectId` từ URL. Trước khi deploy, middleware auth phải xác
-  nhận người gọi là thành viên của project đó.
+- Route nhận `projectId` từ URL và kiểm tra membership server-side trước khi
+  index/retrieve. RPC `match_documents` cũng tự kiểm tra membership để bảo vệ
+  khi bị gọi trực tiếp.
 - Migration chỉ tạo bảng/RPC thuộc feature RAG; PM có thể gộp nó vào schema
   tổng của `users` và `tasks`.
 - Production mode cần OpenAI key, Supabase URL và service-role key thật nên mới

@@ -32,3 +32,76 @@ body {
     transition: left 300ms ease-in-out;
   }
 }
+
+/* Knowledge Hub keeps the NotebookLM layout, while inheriting Nexus' light UI. */
+.notebook-shell {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.notebook-shell [class*="bg-[#17191f]"],
+.notebook-shell [class*="bg-[#191b20]"],
+.notebook-shell [class*="bg-[#202329]"] {
+  background-color: #ffffff !important;
+}
+
+.notebook-shell [class*="bg-[#252a31]"],
+.notebook-shell [class*="bg-[#272c34]"],
+.notebook-shell [class*="bg-[#292e36]"],
+.notebook-shell [class*="bg-[#2a2f37]"],
+.notebook-shell [class*="bg-[#2b3038]"],
+.notebook-shell [class*="bg-[#2d333d]"],
+.notebook-shell [class*="bg-[#343944]"] {
+  background-color: #f1f5f9 !important;
+}
+
+.notebook-shell [class*="border-[#343942]"],
+.notebook-shell [class*="border-[#30343b]"],
+.notebook-shell [class*="border-[#3b414a]"],
+.notebook-shell [class*="border-[#3c424d]"],
+.notebook-shell [class*="border-[#3d434e]"],
+.notebook-shell [class*="border-[#3b4049]"],
+.notebook-shell [class*="border-[#444b56]"],
+.notebook-shell [class*="border-[#4a505a]"],
+.notebook-shell [class*="border-[#4a515c]"],
+.notebook-shell [class*="border-[#59606c]"],
+.notebook-shell [class*="border-[#3c414b]"] {
+  border-color: #cbd5e1 !important;
+}
+
+.notebook-shell [class*="bg-[#6872f7]"],
+.notebook-shell [class*="bg-[#7a83ff]"],
+.notebook-shell [class*="bg-[#7b84ff]"] {
+  background-color: #4f46e5 !important;
+}
+
+.notebook-shell [class*="text-slate-100"],
+.notebook-shell [class*="text-slate-200"] {
+  color: #334155 !important;
+}
+
+.notebook-shell [class*="text-slate-300"] {
+  color: #475569 !important;
+}
+
+.notebook-shell [class*="text-slate-400"] {
+  color: #64748b !important;
+}
+
+.notebook-shell [class*="text-slate-500"] {
+  color: #64748b !important;
+}
+
+.notebook-shell h1,
+.notebook-shell h2 {
+  color: #0f172a !important;
+}
+
+.notebook-shell input {
+  color: #0f172a !important;
+}
+
+.notebook-shell input::placeholder {
+  color: #94a3b8 !important;
+}

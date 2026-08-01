@@ -13,13 +13,9 @@ export function getOpenAIClient() {
 
 export function getSupabaseAdmin() {
   assertProductionConfig();
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    key!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       auth: { autoRefreshToken: false, persistSession: false },
     },
