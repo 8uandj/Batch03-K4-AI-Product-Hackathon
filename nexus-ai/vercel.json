@@ -8,6 +8,14 @@
     {
       "path": "/api/cron/deadline-monitor",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/assignment-followups",
+      "schedule": "15 * * * *"
+    },
+    {
+      "path": "/api/cron/eq-radar",
+      "schedule": "30 1 * * *"
     }
   ]
 }

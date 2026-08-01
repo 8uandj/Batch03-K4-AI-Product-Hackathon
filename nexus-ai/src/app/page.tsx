@@ -3,9 +3,7 @@ import {
   ArrowRight,
   BarChart3,
   Bot,
-  BrainCircuit,
   CheckCircle2,
-  Clock3,
   FileText,
   KanbanSquare,
   LockKeyhole,
@@ -80,13 +78,13 @@ export default async function HomePage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-cyan-100 backdrop-blur">
               <Sparkles aria-hidden="true" size={14} />
-              AI-powered project workspace for hackathon teams
+              Nexus AI · project intelligence workspace
             </div>
             <h1 className="mt-6 max-w-4xl text-4xl font-black tracking-tight md:text-5xl lg:text-6xl">
-              Quản lý dự án thông minh cùng AI.
+              Biến kế hoạch thành tiến độ có thể nhìn thấy.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300">
-              Nexus AI giúp PM tạo project, mời team, nạp knowledge base, chia task, hỏi bot theo tài liệu và theo dõi sức khỏe dự án trong một luồng thống nhất.
+              Nexus tập hợp tài liệu, con người và công việc trong một workspace rõ ràng — để team ra quyết định nhanh hơn, giao việc công bằng hơn và không bỏ sót rủi ro.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -128,38 +126,21 @@ export default async function HomePage() {
             <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-4">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-cyan-200">Project pulse</p>
-                  <h2 className="mt-1 font-semibold">Nexus AI MVP</h2>
+                  <p className="text-xs uppercase tracking-[0.24em] text-cyan-200">Một workspace rõ ràng</p>
+                  <h2 className="mt-1 font-semibold">Từ tài liệu đến hành động</h2>
                 </div>
-                <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-semibold text-emerald-200">
-                  Live
+                <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-xs font-semibold text-cyan-200">
+                  AI native
                 </span>
               </div>
 
               <div className="space-y-4">
-                <div className="rounded-2xl bg-white/[0.06] p-4">
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="text-slate-300">Done / Total</span>
-                    <span className="font-bold text-white">68%</span>
+                {[{ icon: FileText, title: "Knowledge Hub", text: "Tài liệu có cấu trúc, tìm kiếm đúng project và citation rõ ràng." }, { icon: KanbanSquare, title: "Smart Delegation", text: "Task được giao theo skill, capacity và mức độ khẩn cấp." }, { icon: Radar, title: "Team health", text: "Tín hiệu workload giúp PM hỗ trợ đúng lúc, tôn trọng privacy." }].map(({ icon: Icon, title, text }) => (
+                  <div className="group flex gap-3 rounded-2xl bg-white/[0.06] p-4 transition duration-300 hover:bg-white/[0.11]" key={title}>
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 text-cyan-200"><Icon size={18} /></span>
+                    <div><p className="font-semibold text-white">{title}</p><p className="mt-1 text-sm leading-6 text-slate-300">{text}</p></div>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                    <div className="h-full w-[68%] rounded-full bg-gradient-to-r from-cyan-300 to-violet-300" />
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <PulseCard icon={FileText} label="Docs indexed" value="24" />
-                  <PulseCard icon={Clock3} label="Doing > 48h" value="3" warning />
-                </div>
-
-                <div className="rounded-2xl border border-red-300/20 bg-red-400/10 p-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-red-100">
-                    <Radar size={16} /> Red flag detected
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-red-100/80">
-                    API ingestion đang bị block bởi schema mismatch. PM cần review contract trước khi merge tiếp.
-                  </p>
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -198,7 +179,7 @@ export default async function HomePage() {
             className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-50"
             href="/pm-dashboard"
           >
-            Xem PM dashboard <ArrowRight size={15} />
+                Khám phá dashboard <ArrowRight size={15} />
           </Link>
         </div>
 
@@ -221,14 +202,14 @@ export default async function HomePage() {
         <section className="rounded-3xl border bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-violet-700">Your projects</p>
+                <p className="text-sm font-semibold text-violet-700">Workspace của bạn</p>
               <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
                 Workspace của bạn
               </h2>
               <p className="mt-2 text-sm text-slate-500">
                 {user
-                  ? "Dữ liệu lấy theo project_members trong Supabase."
-                  : "Đăng nhập để xem project thật; demo workspace vẫn mở để review UI."}
+                  ? "Các project bạn đang tham gia, được sắp xếp theo hoạt động gần nhất."
+                  : "Đăng nhập để tạo workspace và cộng tác cùng team của bạn."}
               </p>
             </div>
             {user ? (
@@ -289,8 +270,8 @@ export default async function HomePage() {
               </h3>
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
                 {user
-                  ? "Tạo project đầu tiên để bắt đầu invite member, upload docs và bật AI assistant."
-                  : "Đăng nhập để xem dữ liệu Supabase thật, hoặc mở demo workspace để review giao diện."}
+                    ? "Tạo workspace đầu tiên để gom tài liệu, mời thành viên và bắt đầu sprint."
+                  : "Bắt đầu bằng một workspace mới — Nexus sẽ đồng hành từ setup đến lúc bàn giao."}
               </p>
               <div className="mt-5 flex justify-center gap-3">
                 <Link
@@ -298,12 +279,6 @@ export default async function HomePage() {
                   href={user ? "/project/new" : "/login"}
                 >
                   {user ? "Tạo project" : "Đăng nhập"}
-                </Link>
-                <Link
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-50"
-                  href="/project/demo"
-                >
-                  Demo
                 </Link>
               </div>
             </div>
@@ -317,25 +292,16 @@ export default async function HomePage() {
                 <Zap size={20} />
               </div>
               <div>
-                <h2 className="font-bold text-slate-950">AI Copilot loop</h2>
-                <p className="text-xs text-slate-500">Docs → insight → task → risk</p>
+                <h2 className="font-bold text-slate-950">Một flow liền mạch</h2>
+                <p className="text-xs text-slate-500">Từ context đến hành động</p>
               </div>
             </div>
             <div className="mt-5 space-y-3">
-              <SideMetric label="Auth/RLS" value="Ready" />
-              <SideMetric label="Project contract" value="Ready" />
-              <SideMetric label="Bot chat" value="RAG-ready" />
-              <SideMetric label="Kanban" value="Shell" muted />
+              <SideMetric label="Knowledge Hub" value="Có citation" />
+              <SideMetric label="Smart Delegation" value="Theo capacity" />
+              <SideMetric label="Deadline Copilot" value="Theo thời gian thực" />
+              <SideMetric label="Privacy" value="Member-first" />
             </div>
-          </section>
-
-          <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
-            <div className="flex items-center gap-2 font-bold text-amber-950">
-              <BrainCircuit size={18} /> PM note
-            </div>
-            <p className="mt-3 text-sm leading-6 text-amber-800">
-              Home hiện ưu tiên flow product thật: auth, project membership, RAG routes và dashboard live. Các module teammate còn lại có shell để không vỡ demo.
-            </p>
           </section>
         </aside>
       </section>
@@ -348,28 +314,6 @@ function TrustItem({ icon: Icon, text }: { icon: typeof CheckCircle2; text: stri
     <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-2 backdrop-blur">
       <Icon aria-hidden="true" className="text-cyan-200" size={15} />
       <span>{text}</span>
-    </div>
-  );
-}
-
-function PulseCard({
-  icon: Icon,
-  label,
-  value,
-  warning = false,
-}: {
-  icon: typeof FileText;
-  label: string;
-  value: string;
-  warning?: boolean;
-}) {
-  return (
-    <div className="rounded-2xl bg-white/[0.06] p-4 transition hover:bg-white/[0.1]">
-      <div className="flex items-center justify-between">
-        <Icon className={warning ? "text-red-200" : "text-cyan-200"} size={18} />
-        <span className="text-2xl font-black">{value}</span>
-      </div>
-      <p className="mt-2 text-xs text-slate-300">{label}</p>
     </div>
   );
 }

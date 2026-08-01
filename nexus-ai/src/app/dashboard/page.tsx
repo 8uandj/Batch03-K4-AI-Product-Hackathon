@@ -1,5 +1,6 @@
 import { RoleDashboard } from "@/features/dashboard/role-dashboard";
 import { getRoleDashboardData } from "@/features/dashboard/role-dashboard-data";
+import { BackButton } from "@/components/shared/BackButton";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +11,9 @@ type DashboardPageProps = {
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const { projectId } = await searchParams;
 
+  let data;
   try {
-    const data = await getRoleDashboardData(projectId);
-    return <RoleDashboard data={data} />;
+    data = await getRoleDashboardData(projectId);
   } catch (error) {
     return (
       <section className="rounded-3xl border border-red-200 bg-red-50 p-8 text-red-800 shadow-sm">
@@ -24,4 +25,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </section>
     );
   }
+
+  return <><BackButton /><RoleDashboard data={data} /></>;
 }

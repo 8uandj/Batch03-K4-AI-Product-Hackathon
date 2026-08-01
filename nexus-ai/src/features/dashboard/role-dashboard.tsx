@@ -1,25 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   AlertTriangle,
   BarChart3,
   CalendarClock,
-  CheckCircle2,
   Clock3,
   FolderKanban,
-  KanbanSquare,
-  ListTodo,
-  Plus,
+  History,
+  Lightbulb,
   Radar,
   ShieldCheck,
-  Sparkles,
   User,
   UsersRound,
 } from "lucide-react";
 
 import type {
+  AdHocMetrics,
   DashboardStats,
   DashboardTaskItem,
   MemberWorkload,
@@ -251,6 +248,8 @@ function PMDashboard({ data }: { data: Extract<RoleDashboardData, { mode: "pm" }
       />
 
       <StatsGrid stats={data.stats} />
+      <AdHocMetricsCard metrics={data.adHocMetrics} />
+      <PMHealthSignals data={data} />
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className={`${cardClass} overflow-hidden p-0`}>
@@ -316,6 +315,46 @@ function PMDashboard({ data }: { data: Extract<RoleDashboardData, { mode: "pm" }
           </div>
         )}
       </section>
+    </section>
+  );
+}
+
+function PMHealthSignals({ data }: { data: Extract<RoleDashboardData, { mode: "pm" }> }) {
+  return <section className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+    <div className={cardClass}>
+      <div className="flex items-center gap-2 border-b border-slate-100 pb-3"><ShieldCheck className="text-violet-600" size={18} /><h2 className="font-bold text-slate-950">Assignment concentration</h2></div>
+      <p className="mt-2 text-xs leading-5 text-slate-500">Tỷ lệ task đang mở trên mỗi thành viên, dùng để phát hiện một người đang gánh quá nhiều việc.</p>
+      <div className="mt-4 space-y-3">{data.assignmentConcentration.length ? data.assignmentConcentration.slice(0, 5).map((member) => <div key={member.userId}><div className="flex justify-between text-xs font-semibold text-slate-700"><span>{member.name}</span><span>{member.openTasks} task · {member.sharePercentage}%</span></div><div className="mt-1 h-2 rounded-full bg-slate-100"><div className={`h-full rounded-full ${member.sharePercentage >= 60 ? "bg-rose-500" : member.sharePercentage >= 40 ? "bg-amber-500" : "bg-violet-500"}`} style={{ width: `${member.sharePercentage}%` }} /></div></div>) : <EmptyBlock text="Chưa có assignment concentration." />}</div>
+    </div>
+    <div className={cardClass}>
+      <div className="flex items-center gap-2 border-b border-slate-100 pb-3"><History className="text-amber-600" size={18} /><h2 className="font-bold text-slate-950">Force-assign & risk trend</h2></div>
+      <div className="mt-4 grid grid-cols-2 gap-3"><StatCard value={data.forceAssignCount} label="Override đã ghi nhận" tone="indigo" /><StatCard value={data.riskTrend.reduce((sum, item) => sum + item.count, 0)} label="Risk events gần đây" tone="cyan" /></div>
+      <div className="mt-4 flex items-end gap-1.5 rounded-xl bg-slate-50 p-3" aria-label="Risk trend 7 ngày">{data.riskTrend.length ? data.riskTrend.map((item) => <div className="flex flex-1 flex-col items-center gap-1" key={item.date}><div className="w-full rounded-t bg-amber-400" style={{ height: `${Math.max(8, Math.min(56, item.count * 14))}px` }} title={`${item.date}: ${item.count}`} /><span className="text-[9px] text-slate-400">{item.date.slice(5)}</span></div>) : <span className="text-xs text-slate-500">Chưa có dữ liệu trend.</span>}</div>
+    </div>
+    {data.dashboardSuggestions.length ? <div className={`${cardClass} xl:col-span-2`}><div className="flex items-center gap-2"><Lightbulb className="text-cyan-600" size={18} /><h2 className="font-bold text-slate-950">Nexus action suggestions</h2></div><div className="mt-3 grid gap-3 md:grid-cols-2">{data.dashboardSuggestions.map((suggestion) => <article className="rounded-xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-cyan-950" key={suggestion.id}><div className="flex items-start justify-between gap-3"><h3 className="text-sm font-black">{suggestion.title}</h3><span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-bold uppercase text-cyan-700">Confidence {suggestion.confidence}</span></div><p className="mt-1 text-sm leading-5">{suggestion.summary}</p><div className="mt-3 grid grid-cols-2 gap-2">{suggestion.evidence.map((item) => <div className="rounded-lg bg-white/70 px-2.5 py-2" key={`${suggestion.id}-${item.label}`}><p className="text-[10px] font-semibold uppercase text-slate-500">{item.label}</p><p className="mt-0.5 text-xs font-black text-slate-800">{item.value}</p></div>)}</div><p className="mt-2 text-[11px] text-slate-500">Cửa sổ dữ liệu: {suggestion.timeWindow}</p><p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-xs font-bold text-cyan-900">Đề xuất: {suggestion.suggestedAction}</p></article>)}</div></div> : null}
+    {data.privacySignals.length ? <div className={`${cardClass} xl:col-span-2`}><div className="flex items-center gap-2"><ShieldCheck className="text-emerald-600" size={18} /><h2 className="font-bold text-slate-950">Tín hiệu bảo vệ workload</h2></div><p className="mt-2 text-xs leading-5 text-slate-500">Chỉ hiển thị aggregate từ cập nhật task; không phải thời gian online và không có raw timestamp.</p><div className="mt-3 grid gap-3 md:grid-cols-2">{data.privacySignals.map((signal) => <article className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3" key={signal.userId}><p className="text-sm font-black text-emerald-950">{signal.name}</p><p className="mt-1 text-xs text-emerald-800">{signal.summary}</p><p className="mt-2 text-xs font-bold text-emerald-900">{signal.lateNightUpdates} lượt cập nhật aggregate · {signal.windowDays} ngày</p><p className="mt-2 text-xs text-slate-600">Hãy hỏi xem thành viên có cần điều chỉnh workload hoặc deadline không.</p></article>)}</div></div> : null}
+  </section>;
+}
+
+function AdHocMetricsCard({ metrics }: { metrics: AdHocMetrics }) {
+  return (
+    <section className={cardClass}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-bold text-slate-950">Khối lượng phát sinh</h2>
+          <p className="mt-1 text-sm text-slate-500">Theo dõi planned task, ad-hoc và rework trong project.</p>
+        </div>
+        <span className={metrics.forecastAlert ? "rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800" : "rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800"}>
+          {metrics.forecastAlert ? "Cần xem lại forecast" : "Trong ngưỡng kiểm soát"}
+        </span>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        <StatCard value={metrics.planned} label="Planned" tone="slate" />
+        <StatCard value={metrics.adHoc} label="Ad-hoc" tone="indigo" />
+        <StatCard value={metrics.rework} label="Rework/Bug" tone="slate" />
+        <StatCard value={metrics.adHocEffortRatio + "%"} label="Effort phát sinh" tone="cyan" />
+      </div>
+      {metrics.forecastAlert ? <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">Effort phát sinh đang vượt 30% effort còn lại. Nexus đề xuất PM cân nhắc dời task ít ưu tiên, giảm scope, thêm người hỗ trợ hoặc lùi deadline.</p> : null}
     </section>
   );
 }
@@ -465,7 +504,7 @@ function TaskList({
   if (!tasks.length) return <div className="p-5"><EmptyBlock text={empty} /></div>;
 
   return (
-    <ul className="divide-y divide-slate-100">
+    <ul className="divide-y divide-slate-100" data-variant={variant}>
       {tasks.map((task) => (
         <li className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between transition hover:bg-slate-50" key={task.id}>
           <div>
