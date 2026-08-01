@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, FolderKanban, Loader2, MessageSquare, Send, ShieldCheck, UserCheck, UserRound } from "lucide-react";
+import { Bot, FolderKanban, Loader2, MessageSquare, Send, UserRound } from "lucide-react";
 
 import type { TeamChatMessageItem } from "@/app/api/projects/[id]/team-chat/route";
 
@@ -58,16 +58,21 @@ export function TeamChat({ projectId, userProjects = [] }: TeamChatProps) {
   };
 
   useEffect(() => {
-    setIsLoading(true);
-    fetchMessages(activeProjectId);
+    const initialLoad = window.setTimeout(() => {
+      void fetchMessages(activeProjectId);
+    }, 0);
 
     // Fast 2-second real-time polling to sync messages across project members
-    const interval = setInterval(() => fetchMessages(activeProjectId), 2000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => void fetchMessages(activeProjectId), 2000);
+    return () => {
+      window.clearTimeout(initialLoad);
+      clearInterval(interval);
+    };
   }, [activeProjectId]);
 
   const handleSwitchProject = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nextId = e.target.value;
+    setIsLoading(true);
     setActiveProjectId(nextId);
     if (!nextId.startsWith("demo-")) {
       router.push(`/project/${nextId}/chat/team`);

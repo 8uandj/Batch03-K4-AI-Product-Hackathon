@@ -9,7 +9,6 @@ import type {
   WorkspaceInvite,
   WorkspaceMemberProfile,
   WorkspaceProject,
-  WorkspaceRecommendation,
   WorkspaceRiskEvent,
 } from "./types";
 
@@ -58,15 +57,6 @@ type InviteRow = {
   status: string;
 };
 
-type RecommendationRow = {
-  id: string;
-  type: WorkspaceRecommendation["type"];
-  title: string;
-  target_user_id: string | null;
-  rationale: string | null;
-  payload: unknown;
-};
-
 type RiskRow = {
   id: string;
   type: WorkspaceRiskEvent["type"];
@@ -75,7 +65,7 @@ type RiskRow = {
   user_id: string | null;
 };
 
-const TASK_STATUSES: TaskStatus[] = ["todo", "doing", "done"];
+const TASK_STATUSES: TaskStatus[] = ["todo", "doing", "rework", "done"];
 
 function isTaskStatus(value: string): value is TaskStatus {
   return TASK_STATUSES.includes(value as TaskStatus);
@@ -95,25 +85,6 @@ function countByStatus(tasks: TaskRow[]) {
     },
     { todo: 0, doing: 0, rework: 0, done: 0 },
   );
-}
-
-function readRecommendationPayload(payload: unknown) {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return { confidence: 0, suggestedTasks: [] };
-  }
-
-  const value = payload as Record<string, unknown>;
-  const suggestedTasks = Array.isArray(value.suggested_tasks)
-    ? value.suggested_tasks.filter(
-        (task): task is string => typeof task === "string" && task.trim().length > 0,
-      )
-    : [];
-  const confidence =
-    typeof value.confidence === "number" && Number.isFinite(value.confidence)
-      ? Math.min(100, Math.max(0, Math.round(value.confidence)))
-      : 0;
-
-  return { confidence, suggestedTasks };
 }
 
 export async function getCurrentUserProjects(): Promise<ProjectListItem[]> {
@@ -156,7 +127,6 @@ export async function getCurrentUserProjects(): Promise<ProjectListItem[]> {
 export async function getWorkspaceOverview(projectId: string): Promise<{
   project: WorkspaceProject;
   invites: WorkspaceInvite[];
-  recommendations: WorkspaceRecommendation[];
   risks: WorkspaceRiskEvent[];
   currentRole: "pm" | "member";
   dataSource: "supabase";
@@ -179,13 +149,13 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
 
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("id,name,description,status,deadline_at")
+    .select("id,name,description,status,deadline_at,allow_member_task_creation")
     .eq("id", projectId)
     .maybeSingle();
 
   if (projectError || !project) return null;
 
-  const [tasksResult, documentsResult, membersResult, invitesResult, recsResult, risksResult] =
+  const [tasksResult, documentsResult, membersResult, invitesResult, risksResult] =
     await Promise.all([
       supabase
         .from("tasks")
@@ -201,12 +171,6 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
         .select("id,email,role,token,status")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false }),
-      supabase
-        .from("ai_recommendations")
-        .select("id,type,title,target_user_id,rationale,payload")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(5),
       supabase
         .from("risk_events")
         .select("id,type,severity,summary,user_id")
@@ -261,6 +225,7 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
       activeTasks: stats.todo + stats.doing,
       members,
       deadlineAt: project.deadline_at,
+      allowMemberTaskCreation: project.allow_member_task_creation === true,
     },
     invites: ((invitesResult.data ?? []) as InviteRow[]).map((invite) => ({
       id: invite.id,
@@ -271,19 +236,6 @@ export async function getWorkspaceOverview(projectId: string): Promise<{
         ? (invite.status as WorkspaceInvite["status"])
         : "pending",
     })),
-    recommendations: ((recsResult.data ?? []) as RecommendationRow[]).map((item) => {
-      const payload = readRecommendationPayload(item.payload);
-
-      return {
-        id: item.id,
-        type: item.type,
-        title: item.title,
-        member: memberName(item.target_user_id),
-        rationale: item.rationale || "AI chưa ghi lý do chi tiết.",
-        confidence: payload.confidence,
-        suggestedTasks: payload.suggestedTasks,
-      };
-    }),
     risks: ((risksResult.data ?? []) as RiskRow[]).map((risk) => ({
       id: risk.id,
       type: risk.type,

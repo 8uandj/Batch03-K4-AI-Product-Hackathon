@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BadgeCheck, FolderKanban, BrainCircuit, Bug, ListTodo, MessageSquare, Scale, MessageCircleHeart } from "lucide-react";
 
 import { ProfileForm } from "@/features/profile/components/ProfileForm";
+import { PrivacySettings } from "@/features/profile/components/PrivacySettings";
 import { getProfilePageData } from "@/features/profile/data";
 
 export const dynamic = "force-dynamic";
@@ -152,6 +153,7 @@ export default async function ProfilePage() {
             </div>
             <EqSummaryDisplay eqSummary={profile.eq_summary as Record<string, unknown> | string | null | undefined} />
           </div>
+          <PrivacySettings projects={projects.map((project) => ({ id: project.id, name: project.name }))} />
         </aside>
         <ProfileForm profile={profile} />
       </section>

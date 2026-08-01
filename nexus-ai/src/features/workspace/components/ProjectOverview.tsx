@@ -10,27 +10,22 @@ import {
   KanbanSquare,
   MailPlus,
   UsersRound,
-  Sparkles,
   X,
 } from "lucide-react";
 
 import { InviteApprovalActions } from "./InviteApprovalActions";
 import { InviteMemberForm } from "./InviteMemberForm";
-import { ProjectAnalysisForm } from "./ProjectAnalysisForm";
-import { ProjectAiPlanner } from "./ProjectAiPlanner";
-import { EqRadar } from "@/features/eq-radar/components/EqRadar";
+import { TaskCreationPolicy } from "./TaskCreationPolicy";
 
 import type {
   WorkspaceInvite,
   WorkspaceProject,
-  WorkspaceRecommendation,
   WorkspaceRiskEvent,
 } from "../types";
 
 type ProjectOverviewProps = {
   project: WorkspaceProject;
   invites: WorkspaceInvite[];
-  recommendations: WorkspaceRecommendation[];
   risks: WorkspaceRiskEvent[];
   currentRole: "pm" | "member";
   dataSource: "supabase" | "mock";
@@ -39,12 +34,10 @@ type ProjectOverviewProps = {
 export function ProjectOverview({
   project,
   invites,
-  recommendations,
   risks,
   currentRole,
   dataSource,
 }: ProjectOverviewProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "planner" | "eq-radar">("overview");
   const [selectedMember, setSelectedMember] = useState<WorkspaceProject["members"][number] | null>(null);
   const pendingInvites = invites.filter(
     (invite) => invite.status === "pending" || invite.status === "awaiting_approval",
@@ -92,6 +85,18 @@ export function ProjectOverview({
             >
               <BrainCircuit aria-hidden="true" size={16} /> Chat
             </Link>
+            <Link
+              className="inline-flex w-fit items-center gap-2 rounded-md border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:-translate-y-0.5 hover:bg-cyan-100"
+              href={`/project/${project.id}/planner`}
+            >
+              <span aria-hidden="true">✦</span> Nexus AI chia việc
+            </Link>
+            <Link
+              className="inline-flex w-fit items-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-800 transition hover:-translate-y-0.5 hover:bg-violet-100"
+              href={`/project/${project.id}/eq-radar`}
+            >
+              <span aria-hidden="true">◌</span> EQ Radar
+            </Link>
           </div>
         </div>
 
@@ -102,54 +107,18 @@ export function ProjectOverview({
         </div>
       </div>
 
-      {/* Tab Triggers */}
-      <div className="flex border-b border-slate-200 bg-white rounded-lg p-1 shadow-sm gap-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab("overview")}
-          className={`flex-1 sm:flex-initial text-center px-6 py-2.5 text-sm font-black rounded-xl transition ${
-            activeTab === "overview"
-              ? "bg-slate-950 text-white shadow-sm"
-              : "text-slate-500 hover:text-slate-850 hover:bg-slate-50"
-          }`}
-        >
-          Tổng quan & Sức khỏe
-        </button>
-        <button
-          onClick={() => setActiveTab("planner")}
-          className={`flex-1 sm:flex-initial text-center px-6 py-2.5 text-sm font-black rounded-xl transition flex items-center justify-center gap-1.5 ${
-            activeTab === "planner"
-              ? "bg-slate-950 text-white shadow-sm"
-              : "text-slate-500 hover:text-slate-850 hover:bg-slate-50"
-          }`}
-        >
-          <Sparkles size={14} className={activeTab === "planner" ? "text-cyan-300 animate-pulse" : ""} />
-          Nexus AI Task Planner
-        </button>
-        <button
-          onClick={() => setActiveTab("eq-radar")}
-          className={`flex-1 sm:flex-initial text-center px-6 py-2.5 text-sm font-black rounded-xl transition flex items-center justify-center gap-1.5 ${
-            activeTab === "eq-radar"
-              ? "bg-slate-950 text-white shadow-sm"
-              : "text-slate-500 hover:text-slate-850 hover:bg-slate-50"
-          }`}
-        >
-          <BrainCircuit size={14} className={activeTab === "eq-radar" ? "text-violet-300 animate-pulse" : ""} />
-          EQ Radar & Team Health
-        </button>
-      </div>
-      {activeTab === "overview" && (
-        <>
+      <>
           <section className="rounded-3xl border bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-700">Project setup pipeline</p>
-                <h2 className="mt-2 text-2xl font-black text-slate-950">Từ project mới đến AI chia việc</h2>
+                <h2 className="mt-2 text-2xl font-black text-slate-950">Từ project mới đến quy trình làm việc</h2>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                  Sau khi tạo project, PM nên import tài liệu, invite thành viên, rồi chạy AI analysis để Nexus đề xuất phương án chia task dựa trên knowledge base và hồ sơ thành viên.
+                  Hoàn thiện knowledge base, mời đúng thành viên và thống nhất cách cập nhật trước khi bắt đầu sprint. Các công cụ AI được mở ở trang riêng khi team đã sẵn sàng.
                 </p>
               </div>
             </div>
-            <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            <div className="mt-6 grid gap-4 lg:grid-cols-2">
               <SetupStep
                 actionHref={`/project/${project.id}/documents`}
                 actionLabel="Import tài liệu"
@@ -166,12 +135,19 @@ export function ProjectOverview({
                 title="Members"
                 value={`${project.members.length} members · ${invites.length} invites`}
               />
-              <div>
-                <ProjectAnalysisForm
-                  disabled={project.documentsIndexed === 0 || project.members.length === 0 || currentRole !== "pm"}
-                  projectId={project.id}
-                />
-              </div>
+            </div>
+            {currentRole === "pm" ? <TaskCreationPolicy projectId={project.id} initialEnabled={project.allowMemberTaskCreation} /> : null}
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 shadow-sm sm:p-6">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Cách làm việc & nội quy project</p>
+              <h2 className="mt-2 text-xl font-black text-slate-950">Một nguồn sự thật cho cả team</h2>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              <RuleCard title="Cập nhật trên Kanban" text="Mỗi task cần có owner, deadline và acceptance criteria. Khi bị kẹt, báo blocker thay vì để task im lặng." />
+              <RuleCard title="Trao đổi đúng kênh" text="Team Chat dành cho trao đổi nội bộ; Knowledge Bot dành cho câu hỏi dựa trên tài liệu project." />
+              <RuleCard title="Làm việc tôn trọng privacy" text="Nexus chỉ dùng tín hiệu aggregate để gợi ý hỗ trợ. Không theo dõi online presence hay nội dung chat khi chưa opt-in." />
             </div>
           </section>
 
@@ -271,56 +247,8 @@ export function ProjectOverview({
             </section>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <section className="rounded-lg border bg-white p-5 shadow-sm">
-              <div className="mb-4 flex items-center gap-2">
-                <BrainCircuit aria-hidden="true" className="text-slate-500" size={18} />
-                <h2 className="font-semibold text-slate-950">AI đề xuất chia việc</h2>
-              </div>
-              {recommendations.length ? (
-                <div className="space-y-3">
-                  {recommendations.map((item) => (
-                    <article className="rounded-lg border border-slate-200 p-4" key={item.id}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="font-semibold text-slate-900">{item.title}</h3>
-                          <p className="mt-1 text-sm text-slate-500">Cho: {item.member}</p>
-                        </div>
-                        {item.confidence > 0 ? (
-                          <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
-                            {item.confidence}%
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-slate-600">
-                        {item.rationale}
-                      </p>
-                      {item.suggestedTasks.length ? (
-                        <ul className="mt-3 space-y-2">
-                          {item.suggestedTasks.map((task, index) => (
-                            <li
-                              className="flex gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700"
-                              key={`${item.id}-${index}`}
-                            >
-                              <CheckCircle2
-                                aria-hidden="true"
-                                className="mt-0.5 shrink-0 text-emerald-600"
-                                size={15}
-                              />
-                              <span>{task}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState text="Chưa có đề xuất. Bấm “Chạy AI analysis” để tạo task từ tài liệu và hồ sơ thành viên." />
-              )}
-            </section>
-
-            <section className="rounded-lg border bg-white p-5 shadow-sm">
+          <div className="grid gap-6 lg:grid-cols-1">
+            <section className="rounded-3xl border bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-center gap-2">
                 <AlertTriangle aria-hidden="true" className="text-red-500" size={18} />
                 <h2 className="font-semibold text-slate-950">Risk events</h2>
@@ -341,26 +269,11 @@ export function ProjectOverview({
                   ))}
                 </div>
               ) : (
-                <EmptyState text="Chưa phát hiện overdue hoặc overload. Risk mới sẽ hiện tại đây sau AI analysis." />
+                <EmptyState text="Chưa phát hiện risk event cần xử lý. Các sự kiện mới sẽ được cập nhật từ dữ liệu project chuẩn." />
               )}
             </section>
           </div>
-        </>
-      )}
-
-      {activeTab === "planner" && (
-        <ProjectAiPlanner
-          projectId={project.id}
-          initialDeadline={project.deadlineAt ?? null}
-          members={project.members}
-          documentsIndexed={project.documentsIndexed}
-          currentRole={currentRole}
-        />
-      )}
-
-      {activeTab === "eq-radar" && (
-        <EqRadar projectId={project.id} members={project.members} />
-      )}
+      </>
 
       {selectedMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
@@ -498,5 +411,14 @@ function EmptyState({ text }: { text: string }) {
     <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm leading-6 text-slate-500">
       {text}
     </div>
+  );
+}
+
+function RuleCard({ title, text }: { title: string; text: string }) {
+  return (
+    <article className="rounded-2xl border border-white bg-white p-4 transition duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-sm">
+      <h3 className="font-bold text-slate-900">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
+    </article>
   );
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, LogIn, LogOut, Sparkles } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NotificationBell } from "@/components/shared/NotificationBell";
 import { signOut } from "@/features/auth/actions";
 import {
   createClient,
@@ -65,6 +66,7 @@ export async function Header() {
 
           {user ? (
             <>
+              <NotificationBell />
               <Link
                 className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-1.5 pr-3 shadow-sm transition hover:border-cyan-200 hover:shadow-md"
                 href="/profile"

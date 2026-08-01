@@ -11,6 +11,7 @@ export type KanbanTask = {
   id: string;
   title: string;
   description: string | null;
+  acceptanceCriteria?: string | null;
   status: TaskStatus;
   priority: TaskPriority;
   assigneeId: string;
@@ -35,4 +36,4 @@ export type KanbanBoardData = {
   dataSource: "mock" | "supabase";
 };
 
-export type AutoTaskingUser = Pick<KanbanMember, "id" | "name" | "skills">;
+export type AutoTaskingUser = Pick<KanbanMember, "id" | "name" | "skills"> & { workload?: number };

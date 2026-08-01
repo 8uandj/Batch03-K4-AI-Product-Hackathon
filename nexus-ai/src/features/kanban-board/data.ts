@@ -26,6 +26,7 @@ type TaskRow = {
   id: string;
   title: string;
   description: string | null;
+  acceptance_criteria: string | null;
   status: TaskStatus;
   priority: TaskPriority;
   assignee_id: string;
@@ -65,7 +66,7 @@ export async function getKanbanBoardData(
     supabase
       .from("tasks")
       .select(
-        "id,title,description,status,priority,assignee_id,required_skills,due_at,created_at,updated_at",
+        "id,title,description,acceptance_criteria,status,priority,assignee_id,required_skills,due_at,created_at,updated_at",
       )
       .eq("project_id", projectId)
       .order("created_at", { ascending: false }),
@@ -121,6 +122,7 @@ export async function getKanbanBoardData(
       id: task.id,
       title: task.title,
       description: task.description,
+      acceptanceCriteria: task.acceptance_criteria,
       status: task.status,
       priority: task.priority,
       assigneeId: task.assignee_id,

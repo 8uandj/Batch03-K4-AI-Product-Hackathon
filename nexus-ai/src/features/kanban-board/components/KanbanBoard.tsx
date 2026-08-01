@@ -25,6 +25,7 @@ import {
   UserRound,
   UsersRound,
   WandSparkles,
+  Plus,
   X,
 } from "lucide-react";
 
@@ -43,6 +44,7 @@ import {
 import { validateKanbanTransition } from "../transitions";
 import type { KanbanBoardData, KanbanTask } from "../types";
 import { AutoTaskingDialog } from "./AutoTaskingDialog";
+import { ManualTaskDialog } from "./ManualTaskDialog";
 import { KanbanColumn } from "./KanbanColumn";
 import { TaskCardPreview } from "./TaskCard";
 
@@ -58,11 +60,16 @@ type LiveSyncStatus = "connecting" | "live" | "offline";
 export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
   const [tasks, setTasks] = useState(initialData.tasks);
   const [boardScope, setBoardScope] = useState<KanbanBoardScope>("team");
+  const [memberFilter, setMemberFilter] = useState("all");
+  const [deadlineFilter, setDeadlineFilter] = useState<"all" | "overdue" | "week" | "none">("all");
+  const [topicFilter, setTopicFilter] = useState("");
+  const [filterNow] = useState(() => Date.now());
   const [liveSyncStatus, setLiveSyncStatus] = useState<LiveSyncStatus>(
     initialData.dataSource === "supabase" ? "connecting" : "offline",
   );
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
   const [showAutoTasking, setShowAutoTasking] = useState(false);
+  const [showManualTask, setShowManualTask] = useState(false);
   const [showPmOnlyReworkModal, setShowPmOnlyReworkModal] = useState(false);
   const [monitoring, setMonitoring] = useState(false);
   const [refreshingProgress, setRefreshingProgress] = useState(false);
@@ -173,15 +180,20 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
     };
   }, [initialData.dataSource, initialData.projectId]);
 
-  const visibleTasks = useMemo(
-    () =>
-      filterKanbanTasksByScope(
-        tasks,
-        boardScope,
-        initialData.currentUserId,
-      ),
-    [boardScope, initialData.currentUserId, tasks],
-  );
+  const visibleTasks = useMemo(() => {
+    const scoped = filterKanbanTasksByScope(tasks, boardScope, initialData.currentUserId);
+    const now = filterNow;
+    const week = now + 7 * 24 * 60 * 60 * 1000;
+    const topic = topicFilter.trim().toLocaleLowerCase();
+    return scoped.filter((task) => {
+      if (memberFilter !== "all" && task.assigneeId !== memberFilter) return false;
+      if (deadlineFilter === "none" && task.dueAt) return false;
+      if (deadlineFilter === "overdue" && (!task.dueAt || new Date(task.dueAt).getTime() >= now)) return false;
+      if (deadlineFilter === "week" && (!task.dueAt || new Date(task.dueAt).getTime() > week || new Date(task.dueAt).getTime() < now)) return false;
+      if (topic && ![task.title, task.description ?? "", ...task.requiredSkills].join(" ").toLocaleLowerCase().includes(topic)) return false;
+      return true;
+    });
+  }, [boardScope, deadlineFilter, filterNow, initialData.currentUserId, memberFilter, tasks, topicFilter]);
   const tasksByStatus = useMemo(
     () =>
       Object.fromEntries(
@@ -358,6 +370,21 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
     }
   }
 
+  async function reportTaskAction(task: KanbanTask, action: "blocker_reported" | "support_requested") {
+    if (initialData.dataSource === "mock") {
+      setToast({ tone: "success", message: action === "support_requested" ? "Đã ghi nhận yêu cầu hỗ trợ trong demo." : "Đã ghi nhận blocker trong demo." });
+      return;
+    }
+    try {
+      const response = await fetch(`/api/projects/${initialData.projectId}/tasks/${task.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action }) });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error || "Không thể ghi nhận hoạt động task.");
+      setToast({ tone: "success", message: action === "support_requested" ? "Đã gửi yêu cầu hỗ trợ cho PM." : "Đã ghi nhận blocker để PM theo dõi." });
+    } catch (error) {
+      setToast({ tone: "error", message: error instanceof Error ? error.message : "Không thể ghi nhận hoạt động task." });
+    }
+  }
+
   async function refreshProgress() {
     if (initialData.dataSource !== "supabase") {
       setToast({
@@ -491,6 +518,16 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
             </div>
 
             <button
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/30 bg-emerald-400 px-5 py-3.5 text-sm font-black text-emerald-950 shadow-xl shadow-slate-950/20 transition hover:-translate-y-0.5 sm:w-auto"
+              disabled={!initialData.canAutoTask}
+              onClick={() => setShowManualTask(true)}
+              type="button"
+            >
+              <Plus aria-hidden="true" size={18} />
+              Tạo task phát sinh
+            </button>
+
+            <button
               className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-sm font-black text-violet-800 shadow-xl shadow-slate-950/20 transition hover:-translate-y-0.5 hover:shadow-2xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 sm:w-auto"
               disabled={!initialData.canAutoTask}
               onClick={() => setShowAutoTasking(true)}
@@ -597,6 +634,26 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
         </div>
       </section>
 
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Bộ lọc board</p>
+            <p className="mt-1 text-sm font-semibold text-slate-800">Thu hẹp task theo người, hạn và chủ đề</p>
+          </div>
+          <button className="text-xs font-bold text-cyan-700 transition hover:text-cyan-900" onClick={() => { setMemberFilter("all"); setDeadlineFilter("all"); setTopicFilter(""); }} type="button">Xóa bộ lọc</button>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <select aria-label="Lọc theo thành viên" className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-800 outline-none transition focus:border-cyan-400 focus:bg-white" onChange={(event) => setMemberFilter(event.target.value)} value={memberFilter}>
+            <option value="all">Tất cả thành viên</option>
+            {initialData.members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
+          </select>
+          <select aria-label="Lọc theo deadline" className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-800 outline-none transition focus:border-cyan-400 focus:bg-white" onChange={(event) => setDeadlineFilter(event.target.value as typeof deadlineFilter)} value={deadlineFilter}>
+            <option value="all">Mọi deadline</option><option value="overdue">Đang quá hạn</option><option value="week">7 ngày tới</option><option value="none">Chưa có deadline</option>
+          </select>
+          <input aria-label="Lọc theo topic" className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:bg-white" onChange={(event) => setTopicFilter(event.target.value)} placeholder="Topic, title, skill…" value={topicFilter} />
+        </div>
+      </section>
+
       {toast ? (
         <div
           className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold ${
@@ -669,6 +726,7 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
           {statuses.map((status) => (
             <KanbanColumn
               canManageRework={initialData.currentUserRole === "pm"}
+              onTaskAction={reportTaskAction}
               key={status}
               status={status}
               tasks={tasksByStatus[status]}
@@ -679,6 +737,16 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
           {activeTask ? <TaskCardPreview task={activeTask} /> : null}
         </DragOverlay>
       </DndContext>
+
+      {showManualTask ? (
+        <ManualTaskDialog
+          members={initialData.members}
+          tasks={tasks}
+          onClose={() => setShowManualTask(false)}
+          onCreated={(task) => setTasks((current) => [{ id: task.id, title: task.title, description: task.description ?? null, status: task.status, priority: task.priority, assigneeId: task.assignee_id, assigneeName: initialData.members.find((member) => member.id === task.assignee_id)?.name ?? task.assignee_id, assigneeAvatarUrl: null, requiredSkills: task.required_skills ?? [], dueAt: task.due_at ?? null, createdAt: task.created_at, updatedAt: task.updated_at }, ...current])}
+          projectId={initialData.projectId}
+        />
+      ) : null}
 
       {showAutoTasking ? (
         <AutoTaskingDialog

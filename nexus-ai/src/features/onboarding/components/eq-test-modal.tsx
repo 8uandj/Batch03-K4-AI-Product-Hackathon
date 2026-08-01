@@ -26,10 +26,8 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
     if (!isOpen) return null;
 
     const isValid =
-        q1.trim() !== '' &&
         q2.trim() !== '' &&
         q3.trim() !== '' &&
-        q4.trim() !== '' &&
         q5.trim() !== '';
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -47,16 +45,16 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
-            <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-cyan-100 bg-white shadow-2xl shadow-cyan-950/10 flex flex-col max-h-[92vh]">
                 {/* Header với Accent VinUni Red #A6192E & Navy #00205B */}
-                <div className="bg-[#00205B] text-white p-5 flex items-center justify-between relative shrink-0">
+                <div className="bg-gradient-to-br from-cyan-700 via-blue-700 to-indigo-800 text-white p-5 sm:p-6 flex items-center justify-between relative shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-[#A6192E] rounded-xl text-white shadow-md">
+                        <div className="p-2.5 bg-white/15 rounded-2xl text-white shadow-md ring-1 ring-white/20">
                             <BrainCircuit className="w-6 h-6" />
                         </div>
                         <div>
                             <h3 className="font-bold text-lg tracking-wide">Trắc nghiệm đánh giá EQ</h3>
-                            <p className="text-xs text-slate-300">Giúp AI phân tích độ hòa hợp & chẻ task phù hợp cho bạn</p>
+                            <p className="text-xs text-cyan-100">Giúp Nexus chọn cách giao việc phù hợp. Bạn có thể bỏ qua 2 câu bổ sung.</p>
                         </div>
                     </div>
                     <button
@@ -70,7 +68,7 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
                 </div>
 
                 {/* Form Content (Có scroll) */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-5 text-sm overflow-y-auto flex-1">
+                <form onSubmit={handleSubmit} className="p-4 sm:p-7 space-y-5 text-sm overflow-y-auto flex-1 bg-slate-50/60">
                     {/* Question 1 */}
                     <div className="space-y-2">
                         <label className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">

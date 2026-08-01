@@ -25,6 +25,7 @@ export interface WorkspaceProject {
   activeTasks: number;
   members: WorkspaceMemberProfile[];
   deadlineAt?: string | null;
+  allowMemberTaskCreation: boolean;
 }
 
 export interface WorkspaceInvite {

@@ -51,10 +51,12 @@ const columnMeta = {
 
 export function KanbanColumn({
   canManageRework,
+  onTaskAction,
   status,
   tasks,
 }: {
   canManageRework: boolean;
+  onTaskAction?: (task: KanbanTask, action: "blocker_reported" | "support_requested") => void;
   status: TaskStatus;
   tasks: KanbanTask[];
 }) {
@@ -100,6 +102,7 @@ export function KanbanColumn({
         {tasks.map((task) => (
           <DraggableTaskCard
             disabled={reworkLocked}
+            onAction={onTaskAction}
             key={task.id}
             task={task}
           />

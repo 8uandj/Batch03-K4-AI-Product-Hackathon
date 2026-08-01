@@ -2,7 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarDays, GripVertical, LockKeyhole } from "lucide-react";
+import { CalendarDays, CircleHelp, GripVertical, LockKeyhole, MessageCircleWarning } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -43,9 +43,11 @@ function formatDueDate(value: string) {
 
 export function DraggableTaskCard({
   disabled = false,
+  onAction,
   task,
 }: {
   disabled?: boolean;
+  onAction?: (task: KanbanTask, action: "blocker_reported" | "support_requested") => void;
   task: KanbanTask;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -90,6 +92,7 @@ export function DraggableTaskCard({
           )
         }
         overdueHours={overdueHours}
+        onAction={onAction}
         task={task}
       />
     </article>
@@ -107,10 +110,12 @@ export function TaskCardPreview({ task }: { task: KanbanTask }) {
 
 function TaskCardContent({
   dragHandle,
+  onAction,
   overdueHours,
   task,
 }: {
   dragHandle?: React.ReactNode;
+  onAction?: (task: KanbanTask, action: "blocker_reported" | "support_requested") => void;
   overdueHours: number | null;
   task: KanbanTask;
 }) {
@@ -141,6 +146,11 @@ function TaskCardContent({
       {task.description ? (
         <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-slate-500">
           {task.description}
+        </p>
+      ) : null}
+      {task.acceptanceCriteria ? (
+        <p className="mt-2 line-clamp-2 text-[11px] leading-4 text-emerald-700">
+          <span className="font-bold">Đạt khi:</span> {task.acceptanceCriteria}
         </p>
       ) : null}
 
@@ -188,6 +198,12 @@ function TaskCardContent({
           </span>
         ) : null}
       </div>
+      {onAction && task.status !== "done" ? (
+        <div className="mt-3 flex gap-2">
+          <button className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100" onClick={() => onAction(task, "blocker_reported")} type="button"><MessageCircleWarning size={12} /> Báo blocker</button>
+          <button className="inline-flex items-center gap-1 rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-1.5 text-[10px] font-bold text-cyan-700 hover:bg-cyan-100" onClick={() => onAction(task, "support_requested")} type="button"><CircleHelp size={12} /> Cần hỗ trợ</button>
+        </div>
+      ) : null}
     </>
   );
 }

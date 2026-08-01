@@ -46,7 +46,7 @@ export async function completeOnboarding(
     if (!name) return { error: "Vui lòng nhập tên hiển thị." };
     if (!rawCV) return { error: "Vui lòng upload hoặc dán CV." };
     if (!skills.length) return { error: "Vui lòng chọn hoặc trích xuất ít nhất một kỹ năng." };
-    if (Object.keys(eqAnswers).length < 5) return { error: "Vui lòng hoàn tất bài EQ." };
+    if (!eqAnswers.q2_taskPreference || !eqAnswers.q3_communication || !eqAnswers.q5_feedbackHandling) return { error: "Vui lòng hoàn tất 3 câu EQ bắt buộc." };
 
     const supabase = await createClient();
     const {
