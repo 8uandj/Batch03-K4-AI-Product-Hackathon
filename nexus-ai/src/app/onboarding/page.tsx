@@ -28,10 +28,10 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
 
   return (
     <section className="space-y-6">
-      <header className="rounded-3xl border bg-slate-950 p-8 text-white shadow-xl">
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan-200">DEV-01 Onboarding</p>
-        <h1 className="mt-3 text-3xl font-black tracking-tight md:text-4xl">Upload CV và hoàn thiện EQ survey</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
+      <header className="rounded-3xl border border-sky-200 bg-gradient-to-r from-sky-50 via-white to-indigo-50 p-8 text-slate-800 shadow-xl">
+        <p className="text-xs font-bold uppercase tracking-[0.25em] text-sky-600">DEV-01 Onboarding</p>
+        <h1 className="mt-3 text-3xl font-black tracking-tight text-sky-950 md:text-4xl">Upload CV và hoàn thiện EQ survey</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
           Bước này là bắt buộc ngay sau register/login để Nexus AI có dữ liệu kỹ năng và EQ trước khi vào workspace.
         </p>
       </header>

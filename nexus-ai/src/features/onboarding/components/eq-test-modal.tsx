@@ -71,7 +71,7 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
                 <form onSubmit={handleSubmit} className="p-4 sm:p-7 space-y-5 text-sm overflow-y-auto flex-1 bg-slate-50/60">
                     {/* Question 1 */}
                     <div className="space-y-2">
-                        <label className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <label className="font-semibold text-slate-900 flex items-center gap-2">
                             <span className="w-5 h-5 rounded-full bg-[#00205B] text-white text-xs flex items-center justify-center font-bold shrink-0">1</span>
                             Khi gặp bug kĩ thuật sát hạn nộp (Deadline), bạn thường:
                         </label>
@@ -84,8 +84,8 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
                                 <label
                                     key={option}
                                     className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer border transition ${q1 === option
-                                        ? 'border-[#00205B] bg-blue-50/50 dark:bg-blue-950/30 font-medium text-[#00205B] dark:text-blue-300'
-                                        : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                        ? 'border-sky-600 bg-sky-50 font-medium text-sky-900'
+                                        : 'border-transparent text-slate-700 hover:bg-slate-100'
                                         }`}
                                 >
                                     <input
@@ -103,7 +103,7 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
 
                     {/* Question 2 */}
                     <div className="space-y-2">
-                        <label className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <label className="font-semibold text-slate-900 flex items-center gap-2">
                             <span className="w-5 h-5 rounded-full bg-[#00205B] text-white text-xs flex items-center justify-center font-bold shrink-0">2</span>
                             Bạn thích nhận task như thế nào từ AI / PM?
                         </label>
@@ -116,8 +116,8 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
                                 <label
                                     key={option}
                                     className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer border transition ${q2 === option
-                                        ? 'border-[#00205B] bg-blue-50/50 dark:bg-blue-950/30 font-medium text-[#00205B] dark:text-blue-300'
-                                        : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                        ? 'border-sky-600 bg-sky-50 font-medium text-sky-900'
+                                        : 'border-transparent text-slate-700 hover:bg-slate-100'
                                         }`}
                                 >
                                     <input
@@ -135,7 +135,7 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
 
                     {/* Question 3 */}
                     <div className="space-y-2">
-                        <label className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <label className="font-semibold text-slate-900 flex items-center gap-2">
                             <span className="w-5 h-5 rounded-full bg-[#00205B] text-white text-xs flex items-center justify-center font-bold shrink-0">3</span>
                             Kênh giao tiếp ưu tiên của bạn trong làm việc nhóm:
                         </label>
@@ -148,8 +148,8 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
                                 <label
                                     key={option}
                                     className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer border transition ${q3 === option
-                                        ? 'border-[#00205B] bg-blue-50/50 dark:bg-blue-950/30 font-medium text-[#00205B] dark:text-blue-300'
-                                        : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                        ? 'border-sky-600 bg-sky-50 font-medium text-sky-900'
+                                        : 'border-transparent text-slate-700 hover:bg-slate-100'
                                         }`}
                                 >
                                     <input
@@ -167,7 +167,7 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
 
                     {/* Question 4 */}
                     <div className="space-y-2">
-                        <label className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <label className="font-semibold text-slate-900 flex items-center gap-2">
                             <span className="w-5 h-5 rounded-full bg-[#00205B] text-white text-xs flex items-center justify-center font-bold shrink-0">4</span>
                             Khi có bất đồng ý kiến về kiến trúc / kỹ thuật trong nhóm, bạn sẽ:
                         </label>
@@ -180,8 +180,8 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
                                 <label
                                     key={option}
                                     className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer border transition ${q4 === option
-                                        ? 'border-[#00205B] bg-blue-50/50 dark:bg-blue-950/30 font-medium text-[#00205B] dark:text-blue-300'
-                                        : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                        ? 'border-sky-600 bg-sky-50 font-medium text-sky-900'
+                                        : 'border-transparent text-slate-700 hover:bg-slate-100'
                                         }`}
                                 >
                                     <input
@@ -199,7 +199,7 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
 
                     {/* Question 5 */}
                     <div className="space-y-2">
-                        <label className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <label className="font-semibold text-slate-900 flex items-center gap-2">
                             <span className="w-5 h-5 rounded-full bg-[#00205B] text-white text-xs flex items-center justify-center font-bold shrink-0">5</span>
                             Cách bạn tiếp nhận phản hồi (Feedback) & Code Review từ đồng đội:
                         </label>
@@ -212,8 +212,8 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
                                 <label
                                     key={option}
                                     className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer border transition ${q5 === option
-                                        ? 'border-[#00205B] bg-blue-50/50 dark:bg-blue-950/30 font-medium text-[#00205B] dark:text-blue-300'
-                                        : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                        ? 'border-sky-600 bg-sky-50 font-medium text-sky-900'
+                                        : 'border-transparent text-slate-700 hover:bg-slate-100'
                                         }`}
                                 >
                                     <input
@@ -230,12 +230,12 @@ export const EQTestModal: React.FC<EQTestModalProps> = ({
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+                    <div className="pt-4 border-t border-slate-200 flex items-center justify-between shrink-0">
                         <button
                             type="button"
                             onClick={onClose}
                             disabled={isSubmitting}
-                            className="px-4 py-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition font-medium text-xs"
+                            className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-xl transition font-medium text-xs"
                         >
                             Để sau
                         </button>
