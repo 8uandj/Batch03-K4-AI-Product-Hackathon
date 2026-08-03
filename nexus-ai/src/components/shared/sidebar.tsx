@@ -136,8 +136,10 @@ export function Sidebar({
           pathname.includes("/documents")),
     },
     {
-      label: "Team & Bot Chat",
-      href: projectId ? `/project/${projectId}/chat` : "/project",
+      label: "ChatTeam",
+      // The sidebar entry is the Team Chat shortcut. `/chat` is only the
+      // chooser page and made this icon look like it opened the dashboard.
+      href: projectId ? `/project/${projectId}/chat/team` : "/project",
       icon: MessageSquare,
       isActive: pathname.includes("/chat"),
     },

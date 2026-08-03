@@ -16,6 +16,11 @@ function getString(formData: FormData, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function isRedirectError(error: unknown) {
+  return typeof error === "object" && error !== null && "digest" in error &&
+    String(error.digest).startsWith("NEXT_REDIRECT");
+}
+
 async function requireUser() {
   const supabase = await createClient();
   const {
@@ -169,13 +174,21 @@ export async function acceptInvite(
     });
 
     if (error || !projectId) return { error: error?.message || "Không thể join project." };
+
+    // An already-approved/replayed invite should take the member straight to
+    // the project. A newly accepted invite is intentionally kept pending until
+    // a PM approves it.
+    const { data: membership } = await supabase
+      .from("project_members")
+      .select("project_id")
+      .eq("project_id", projectId)
+      .eq("user_id", (await supabase.auth.getUser()).data.user?.id ?? "")
+      .maybeSingle();
+    if (membership) redirect(`/project/${projectId}`);
+
     redirect(`/join/${token}?status=pending`);
   } catch (error) {
-    const digest =
-      typeof error === "object" && error && "digest" in error
-        ? String(error.digest)
-        : "";
-    if (digest.startsWith("NEXT_REDIRECT")) throw error;
+    if (isRedirectError(error)) throw error;
 
     return { error: error instanceof Error ? error.message : "Không thể join project." };
   }
@@ -315,10 +328,16 @@ export async function joinProjectWithInput(
 
     // Otherwise, treat as invite link or token
     let token = input;
-    if (input.includes("/join/")) {
-      const parts = input.split("/join/");
-      token = parts[parts.length - 1].split("?")[0].split("#")[0].trim();
+    try {
+      const parsed = new URL(input);
+      const match = parsed.pathname.match(/\/join\/([^/]+)$/i);
+      if (match?.[1]) token = match[1];
+    } catch {
+      const match = input.match(/\/join\/([^/?#\s]+)$/i);
+      if (match?.[1]) token = match[1];
     }
+    token = token.split("?")[0].split("#")[0].trim();
+    if (!token) return { error: "Link invite không chứa token hợp lệ." };
 
     if (token === "demo") {
       redirect(`/project/demo`);
@@ -332,6 +351,14 @@ export async function joinProjectWithInput(
     if (inviteError || !projectId) {
       return { error: inviteError?.message || "Mã invite không hợp lệ hoặc đã hết hạn." };
     }
+
+    const { data: membership } = await supabase
+      .from("project_members")
+      .select("project_id")
+      .eq("project_id", projectId)
+      .eq("user_id", (await supabase.auth.getUser()).data.user?.id ?? "")
+      .maybeSingle();
+    if (membership) redirect(`/project/${projectId}`);
 
     redirect(`/join/${token}?status=pending`);
   } catch (error) {

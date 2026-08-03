@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const migrationDir = join(dirname(fileURLToPath(import.meta.url)), "..", "supabase", "migrations");
-const requiredMigrationIds = Array.from({ length: 29 }, (_, index) => String(index + 14).padStart(3, "0"));
+const requiredMigrationIds = Array.from({ length: 30 }, (_, index) => String(index + 14).padStart(3, "0"));
 // A migration prefix is sufficient here; filenames are intentionally allowed
 // to evolve while their ordered numeric IDs remain stable.
 const { readdirSync } = await import("node:fs");
@@ -12,7 +12,7 @@ if (actuallyMissingMigrations.length) {
   console.error(`Missing ordered Supabase migrations: ${actuallyMissingMigrations.join(", ")}`);
   process.exit(1);
 }
-console.log(`[ok] local migration manifest 014–042 (${requiredMigrationIds.length} files)`);
+console.log(`[ok] local migration manifest 014–043 (${requiredMigrationIds.length} files)`);
 
 const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const apiKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -56,6 +56,6 @@ for (const table of checks) {
 }
 
 if (failed) {
-    console.error("Apply migrations 014 through 042 in order, then reload the PostgREST schema cache.");
+    console.error("Apply migrations 014 through 043 in order, then reload the PostgREST schema cache.");
   process.exit(1);
 }

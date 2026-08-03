@@ -32,6 +32,7 @@ Các core Multi-Agent/Deadline/EQ cần apply migration theo thứ tự:
 040_privacy_data_cleanup_rpc.sql
 041_risk_event_read_privacy.sql
 042_project_isolation_guards_extended.sql
+043_harden_project_join_requests.sql
 ```
 
 Sau khi apply, chạy smoke-check read-only:
