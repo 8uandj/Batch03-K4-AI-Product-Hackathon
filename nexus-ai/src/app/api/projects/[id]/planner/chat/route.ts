@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { modelFor, persistAgentRun, tokenUsageFromOpenAI } from "@/features/ai/model-router";
+import { buildTaskPlanningSystemPrompt } from "@/features/ai/task-planning-prompt";
 import {
   ProjectAccessError,
   requireProjectAccess,
@@ -261,15 +262,16 @@ export async function POST(request: Request, { params }: RouteContext) {
           messages: [
             {
               role: "system",
-              content: [
-                "Bạn là trợ lý Nexus AI, phụ trách hỗ trợ PM lập kế hoạch.",
+              content: buildTaskPlanningSystemPrompt([
+                "Bạn là trợ lý thương lượng kế hoạch của PM.",
                 "Bạn đang thương lượng với PM về thời hạn và việc phân chia task.",
                 "PM có thể yêu cầu dời deadline, đổi người gán việc, thêm/bớt task.",
                 `Dự án phải hoàn thành trong tối đa ${deadlineDays} ngày kể từ hôm nay.`,
                 "Hãy trả về phản hồi lịch sự bằng tiếng Việt giải thích những gì bạn đã làm, ĐỒNG THỜI cập nhật danh sách task trong schema trả về.",
                 "Chỉ gán task cho assignee_id có trong danh sách thành viên được cung cấp.",
                 "Hãy giữ nguyên các task khác không bị ảnh hưởng bởi yêu cầu của PM.",
-              ].join("\n"),
+                "Khi thêm hoặc tái cấu trúc task, giữ nguyên feature-first; không biến một feature thành backend/frontend riêng nếu không có lý do kỹ thuật.",
+              ]),
             },
             ...history,
             {
@@ -304,6 +306,11 @@ export async function POST(request: Request, { params }: RouteContext) {
                         assignee_id: { type: "string", enum: members.map((m) => m.id) },
                         required_skills: { type: "array", items: { type: "string" } },
                         due_in_days: { type: "integer", minimum: 1, maximum: deadlineDays },
+                        delivery_mode: { type: "string", enum: ["feature", "layer"] },
+                        feature_scope: { type: "string" },
+                        layers: { type: "array", items: { type: "string" }, maxItems: 10 },
+                        layer_reason: { type: "string" },
+                        acceptance_criteria: { type: "string" },
                       },
                       required: [
                         "title",
@@ -312,6 +319,11 @@ export async function POST(request: Request, { params }: RouteContext) {
                         "assignee_id",
                         "required_skills",
                         "due_in_days",
+                        "delivery_mode",
+                        "feature_scope",
+                        "layers",
+                        "layer_reason",
+                        "acceptance_criteria",
                       ],
                     },
                   },

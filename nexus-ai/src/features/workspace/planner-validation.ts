@@ -7,6 +7,11 @@ export type PlannerTaskDraft = {
   assignee_id: string;
   required_skills: string[];
   due_in_days: number;
+  delivery_mode?: "feature" | "layer";
+  feature_scope?: string;
+  layers?: string[];
+  layer_reason?: string;
+  acceptance_criteria?: string;
 };
 
 export class PlannerValidationError extends Error {
@@ -68,6 +73,7 @@ export function validatePlannerTasks(
     const assigneeId =
       typeof task.assignee_id === "string" ? task.assignee_id.trim() : "";
     const dueInDays = Number(task.due_in_days);
+    const deliveryMode = task.delivery_mode === "layer" ? "layer" : "feature";
 
     if (!title) {
       throw new PlannerValidationError(`Task #${index + 1} chưa có tên.`);
@@ -100,6 +106,16 @@ export function validatePlannerTasks(
           ),
         ).slice(0, 20)
       : [];
+    const layers = Array.isArray(task.layers)
+      ? Array.from(new Set(task.layers.filter((layer): layer is string => typeof layer === "string").map((layer) => layer.trim()).filter(Boolean))).slice(0, 10)
+      : [];
+    const featureScope = typeof task.feature_scope === "string" ? task.feature_scope.trim().slice(0, 240) : title;
+    const layerReason = typeof task.layer_reason === "string" ? task.layer_reason.trim().slice(0, 500) : "";
+    const acceptanceCriteria = typeof task.acceptance_criteria === "string" ? task.acceptance_criteria.trim().slice(0, 1200) : "";
+
+    if (deliveryMode === "layer" && !layerReason) {
+      throw new PlannerValidationError(`Task layer "${title}" phải nêu lý do tách layer.`);
+    }
 
     return {
       title: title.slice(0, 160),
@@ -108,6 +124,11 @@ export function validatePlannerTasks(
       assignee_id: assigneeId,
       required_skills: requiredSkills,
       due_in_days: dueInDays,
+      delivery_mode: deliveryMode,
+      feature_scope: featureScope,
+      layers,
+      layer_reason: layerReason,
+      acceptance_criteria: acceptanceCriteria,
     };
   });
 }

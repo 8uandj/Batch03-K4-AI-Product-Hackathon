@@ -66,3 +66,42 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return Response.json({ error: message }, { status });
   }
 }
+
+export async function DELETE(_request: Request, { params }: RouteContext) {
+  try {
+    const { id: projectId, taskId } = await params;
+
+    if (projectId === "demo") {
+      return Response.json({ success: true, persisted: false, taskId });
+    }
+
+    const access = await requireProjectAccess(projectId);
+    if (access.role !== "pm") {
+      return Response.json(
+        { error: "Chỉ PM mới có quyền xóa task trên Team board." },
+        { status: 403 },
+      );
+    }
+    if (!access.supabase) throw new Error("Không thể kết nối dữ liệu project.");
+
+    const result = await access.supabase
+      .from("tasks")
+      .delete()
+      .eq("id", taskId)
+      .eq("project_id", projectId)
+      .select("id")
+      .maybeSingle();
+
+    if (result.error) throw new Error(result.error.message);
+    if (!result.data) {
+      return Response.json({ error: "Không tìm thấy task trong project này." }, { status: 404 });
+    }
+
+    return Response.json({ success: true, persisted: true, taskId: result.data.id });
+  } catch (error) {
+    return Response.json(
+      { error: error instanceof Error ? error.message : "Không thể xóa task." },
+      { status: error instanceof ProjectAccessError ? error.status : 500 },
+    );
+  }
+}

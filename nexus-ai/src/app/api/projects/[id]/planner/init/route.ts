@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import OpenAI from "openai";
 import { modelFor, persistAgentRun, tokenUsageFromOpenAI } from "@/features/ai/model-router";
+import { buildTaskPlanningSystemPrompt } from "@/features/ai/task-planning-prompt";
 import {
   ProjectAccessError,
   requireProjectAccess,
@@ -49,21 +50,21 @@ function generateDynamicFallbackTasks(
       }
     },
     {
-      keywords: ["backend", "db", "database", "api", "supabase", "server", "lưu trữ"],
+      keywords: ["auth", "đăng nhập", "login", "user", "profile"],
       task: {
-        title: "Thiết kế & Xây dựng Backend cùng API Endpoints",
-        description: "Thiết lập cơ sở dữ liệu Supabase, lập trình các API endpoint xử lý logic nghiệp vụ và kết nối dữ liệu an toàn.",
+        title: "Hoàn thiện luồng tài khoản người dùng end-to-end",
+        description: "Xây dựng trọn luồng đăng nhập, hồ sơ và quyền truy cập từ giao diện đến API, dữ liệu và kiểm thử.",
         priority: "high" as const,
-        skills: ["Development", "Supabase", "API"],
+        skills: ["Full-stack", "Auth", "Supabase", "Testing"],
       }
     },
     {
-      keywords: ["frontend", "ui", "ux", "giao diện", "react", "tailwind", "css"],
+      keywords: ["dashboard", "kanban", "board", "giao diện", "feature", "tính năng"],
       task: {
-        title: "Xây dựng giao diện Frontend & Tích hợp API",
-        description: "Phát triển các màn hình responsive sử dụng React/Tailwind, đồng bộ dữ liệu từ API và tối ưu trạng thái loading/empty.",
+        title: "Hoàn thiện trải nghiệm chính của sản phẩm end-to-end",
+        description: "Sở hữu một user journey hoàn chỉnh: UI responsive, logic nghiệp vụ, API/dữ liệu, loading/error state và kiểm thử.",
         priority: "medium" as const,
-        skills: ["UI/UX", "React", "Development"],
+        skills: ["Full-stack", "UI/UX", "React", "API", "Testing"],
       }
     },
     {
@@ -110,16 +111,16 @@ function generateDynamicFallbackTasks(
         skills: ["Product Analysis", "Documentation"],
       },
       {
-        title: "Phát triển các API & Tính năng cốt lõi",
-        description: "Viết các hàm xử lý logic nghiệp vụ và liên kết cơ sở dữ liệu backend vững chắc.",
-        priority: "high" as const,
-        skills: ["Development", "API"],
+      title: "Hoàn thiện một vertical slice của tính năng cốt lõi",
+      description: "Từ user journey và domain logic đến UI, API, dữ liệu, kiểm thử và demo; người sở hữu chịu trách nhiệm end-to-end.",
+      priority: "high" as const,
+      skills: ["Full-stack", "Product", "Testing"],
       },
       {
-        title: "Lập trình Giao diện & Kết nối API",
-        description: "Hoàn thiện thiết kế UI/UX trên frontend và kết nối đồng bộ dữ liệu từ backend.",
-        priority: "medium" as const,
-        skills: ["UI/UX", "React"],
+      title: "Tích hợp các feature thành luồng sản phẩm hoàn chỉnh",
+      description: "Kết nối UI, API và dữ liệu giữa các feature, xử lý trạng thái lỗi và xác nhận demo end-to-end.",
+      priority: "medium" as const,
+      skills: ["Integration", "Full-stack", "Testing"],
       },
       {
         title: "Kiểm thử tổng thể & Đóng gói sản phẩm",
@@ -157,6 +158,11 @@ function generateDynamicFallbackTasks(
       assignee_id: assignedMember.id,
       required_skills: Array.from(new Set([...template.skills, ...assignedMember.skills.slice(0, 1)])),
       due_in_days,
+      delivery_mode: "feature" as const,
+      feature_scope: template.title,
+      layers: ["UI", "API", "Data", "Test"],
+      layer_reason: "",
+      acceptance_criteria: `Demo được luồng ${template.title.toLowerCase()} với dữ liệu thật hoặc dữ liệu mẫu, có xử lý loading/error và kiểm thử đường đi chính.`,
     };
   });
 }
@@ -268,14 +274,12 @@ export async function POST(request: Request, { params }: RouteContext) {
           messages: [
             {
               role: "system",
-              content: [
-                "Bạn là Nexus AI, chuyên gia lập kế hoạch dự án và phân chia công việc.",
-                "Nhiệm vụ của bạn là đọc thông tin dự án, danh sách thành viên và thời hạn để phân rã dự án thành các task cụ thể.",
+              content: buildTaskPlanningSystemPrompt([
+                "Đọc thông tin dự án, danh sách thành viên và thời hạn để phân rã thành các task cụ thể.",
                 `Dự án phải hoàn thành trong vòng tối đa ${deadlineDays} ngày kể từ hôm nay.`,
-                "Hãy gán công việc dựa trên năng lực (skills) của từng thành viên và phân bổ khối lượng hợp lý.",
                 "Chỉ gán task cho assignee_id có trong danh sách thành viên được cung cấp.",
-                "Không tạo các task chung chung. Task phải mô tả rõ ràng đầu ra.",
-              ].join("\n"),
+                "Tạo kế hoạch feature-first; mỗi feature nên là một vertical slice. Tách layer chỉ khi có lý do và phải tạo interface/integration rõ ràng.",
+              ]),
             },
             {
               role: "user",
@@ -308,6 +312,11 @@ export async function POST(request: Request, { params }: RouteContext) {
                         assignee_id: { type: "string", enum: members.map((m) => m.id) },
                         required_skills: { type: "array", items: { type: "string" } },
                         due_in_days: { type: "integer", minimum: 1, maximum: deadlineDays },
+                        delivery_mode: { type: "string", enum: ["feature", "layer"] },
+                        feature_scope: { type: "string" },
+                        layers: { type: "array", items: { type: "string" }, maxItems: 10 },
+                        layer_reason: { type: "string" },
+                        acceptance_criteria: { type: "string" },
                       },
                       required: [
                         "title",
@@ -316,6 +325,11 @@ export async function POST(request: Request, { params }: RouteContext) {
                         "assignee_id",
                         "required_skills",
                         "due_in_days",
+                        "delivery_mode",
+                        "feature_scope",
+                        "layers",
+                        "layer_reason",
+                        "acceptance_criteria",
                       ],
                     },
                   },

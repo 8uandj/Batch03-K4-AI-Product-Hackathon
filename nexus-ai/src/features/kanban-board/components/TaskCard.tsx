@@ -2,7 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarDays, CircleHelp, GripVertical, LockKeyhole, MessageCircleWarning } from "lucide-react";
+import { CalendarDays, CircleHelp, GripVertical, LockKeyhole, MessageCircleWarning, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -44,10 +44,12 @@ function formatDueDate(value: string) {
 export function DraggableTaskCard({
   disabled = false,
   onAction,
+  onDelete,
   task,
 }: {
   disabled?: boolean;
   onAction?: (task: KanbanTask, action: "blocker_reported" | "support_requested") => void;
+  onDelete?: (task: KanbanTask) => void;
   task: KanbanTask;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -93,6 +95,7 @@ export function DraggableTaskCard({
         }
         overdueHours={overdueHours}
         onAction={onAction}
+        onDelete={onDelete}
         task={task}
       />
     </article>
@@ -111,11 +114,13 @@ export function TaskCardPreview({ task }: { task: KanbanTask }) {
 function TaskCardContent({
   dragHandle,
   onAction,
+  onDelete,
   overdueHours,
   task,
 }: {
   dragHandle?: React.ReactNode;
   onAction?: (task: KanbanTask, action: "blocker_reported" | "support_requested") => void;
+  onDelete?: (task: KanbanTask) => void;
   overdueHours: number | null;
   task: KanbanTask;
 }) {
@@ -198,6 +203,15 @@ function TaskCardContent({
           </span>
         ) : null}
       </div>
+      {onDelete ? (
+        <button
+          className="mt-3 inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1.5 text-[10px] font-bold text-rose-700 transition hover:bg-rose-100"
+          onClick={() => onDelete(task)}
+          type="button"
+        >
+          <Trash2 aria-hidden="true" size={12} /> Xóa task
+        </button>
+      ) : null}
       {onAction && task.status !== "done" ? (
         <div className="mt-3 flex gap-2">
           <button className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100" onClick={() => onAction(task, "blocker_reported")} type="button"><MessageCircleWarning size={12} /> Báo blocker</button>

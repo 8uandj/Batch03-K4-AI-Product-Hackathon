@@ -51,11 +51,15 @@ const columnMeta = {
 
 export function KanbanColumn({
   canManageRework,
+  canDeleteTasks,
+  onTaskDelete,
   onTaskAction,
   status,
   tasks,
 }: {
   canManageRework: boolean;
+  canDeleteTasks: boolean;
+  onTaskDelete?: (task: KanbanTask) => void;
   onTaskAction?: (task: KanbanTask, action: "blocker_reported" | "support_requested") => void;
   status: TaskStatus;
   tasks: KanbanTask[];
@@ -103,6 +107,7 @@ export function KanbanColumn({
           <DraggableTaskCard
             disabled={reworkLocked}
             onAction={onTaskAction}
+            onDelete={canDeleteTasks ? onTaskDelete : undefined}
             key={task.id}
             task={task}
           />

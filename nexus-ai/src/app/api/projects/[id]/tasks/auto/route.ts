@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import OpenAI from "openai";
 import { modelFor, tokenUsageFromOpenAI } from "@/features/ai/model-router";
+import { buildTaskPlanningSystemPrompt } from "@/features/ai/task-planning-prompt";
 import { AutoTaskingAgent, createAgentOrchestrator } from "@/features/ai/orchestrator";
 
 import type {
@@ -80,25 +81,25 @@ function createMockDrafts(users: AutoTaskingUser[], count: number): TaskDraft[] 
       skills: ["Product Analysis", "Documentation"],
     },
     {
-      title: "Thiết kế kiến trúc giải pháp",
+      title: "Hoàn thiện feature đầu tiên end-to-end",
       description:
-        "Đề xuất component, data flow và API contract cho luồng nghiệp vụ chính.",
+        "Chốt user journey, component, data flow, API contract và acceptance criteria để một người/agent có thể triển khai trọn feature.",
       priority: "high" as const,
-      skills: ["System Design", "API"],
+      skills: ["Product", "Full-stack", "System Design"],
     },
     {
-      title: "Xây dựng chức năng cốt lõi",
+      title: "Triển khai luồng nghiệp vụ cốt lõi",
       description:
-        "Implement happy path theo contract và kết nối với dữ liệu dự án.",
+        "Implement happy path, kết nối dữ liệu/API, xử lý lỗi và hoàn thiện kiểm thử cho một user journey có thể demo.",
       priority: "high" as const,
-      skills: ["Development", "Integration"],
+      skills: ["Full-stack", "Integration", "Testing"],
     },
     {
-      title: "Hoàn thiện giao diện và trạng thái UX",
+      title: "Hoàn thiện trải nghiệm người dùng của feature",
       description:
-        "Bổ sung responsive, loading, empty, error state và accessibility.",
+        "Hoàn thiện responsive, loading, empty, error state và accessibility trong cùng feature; không tách UI khỏi logic/API nếu không có dependency.",
       priority: "medium" as const,
-      skills: ["UI/UX", "Frontend"],
+      skills: ["Full-stack", "UI/UX", "Frontend"],
     },
     {
       title: "Kiểm thử và xử lý edge case",
@@ -217,14 +218,15 @@ async function generateDraftsWithOpenAI(
       messages: [
         {
           role: "system",
-          content: [
-            "Bạn là Nexus AI, chuyên gia Work Breakdown Structure.",
+          content: buildTaskPlanningSystemPrompt([
+            "Bạn là Nexus AI, chuyên gia lập kế hoạch feature và Work Breakdown Structure.",
             "Hãy chia project thành các task độc lập, có đầu ra kiểm chứng được.",
             "Chỉ dùng assignee_id có trong danh sách thành viên.",
             "Gán người dựa trên skills và cân bằng workload.",
             "Task mới luôn bắt đầu ở trạng thái todo.",
             "Không tạo task mơ hồ như 'làm dự án' hoặc 'nghiên cứu thêm'.",
-          ].join("\n"),
+            "Ưu tiên task feature end-to-end; nếu task là layer thì phải có lý do và interface bàn giao rõ ràng.",
+          ]),
         },
         {
           role: "user",

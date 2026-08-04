@@ -15,7 +15,9 @@ import {
   AlertCircle,
   CheckCircle2,
   ListTodo,
-  AlertTriangle
+  AlertTriangle,
+  Layers3,
+  GitBranch,
 } from "lucide-react";
 
 import type { WorkspaceMemberProfile } from "../types";
@@ -29,6 +31,11 @@ type TaskDraft = {
   assignee_id: string;
   required_skills: string[];
   due_in_days: number;
+  delivery_mode?: "feature" | "layer";
+  feature_scope?: string;
+  layers?: string[];
+  layer_reason?: string;
+  acceptance_criteria?: string;
 };
 
 type ChatMessage = {
@@ -131,7 +138,7 @@ export function ProjectAiPlanner({
         {
           id: "welcome",
           role: "assistant",
-          content: `Chào PM, tôi đã phân tích tài liệu và thành viên dự án. Dựa vào thời hạn hoàn thành dự án là ${data.deadlineDays} ngày, tôi đề xuất chia thành ${tasksWithKeys.length} task cho các thành viên. Bạn có thể kéo xuống dưới để sửa trực tiếp hoặc trao đổi ở khung chat bên phải này để tôi tự động cập nhật lại!`
+          content: `Chào PM, tôi đã phân tích tài liệu và thành viên dự án. Dựa vào thời hạn ${data.deadlineDays} ngày, tôi đề xuất ${tasksWithKeys.length} task theo hướng feature-first: mỗi người/agent sở hữu một vertical slice từ UI đến API, dữ liệu, kiểm thử và demo. Chỉ các phần dùng chung hoặc có phụ thuộc kỹ thuật mới được tách theo layer. Bạn có thể chỉnh trực tiếp hoặc thương lượng với tôi ở khung chat bên phải.`
         }
       ]);
       setActiveStage("planning");
@@ -164,13 +171,18 @@ export function ProjectAiPlanner({
 
     try {
       // Map current tasks back to the clean structure (without our temporary UI client-side ids)
-      const cleanTasks = tasks.map(({ title, description, priority, assignee_id, required_skills, due_in_days }) => ({
+      const cleanTasks = tasks.map(({ title, description, priority, assignee_id, required_skills, due_in_days, delivery_mode, feature_scope, layers, layer_reason, acceptance_criteria }) => ({
         title,
         description,
         priority,
         assignee_id,
         required_skills,
-        due_in_days
+        due_in_days,
+        delivery_mode,
+        feature_scope,
+        layers,
+        layer_reason,
+        acceptance_criteria,
       }));
 
       const response = await fetch(`/api/projects/${projectId}/planner/chat`, {
@@ -222,13 +234,18 @@ export function ProjectAiPlanner({
     setError(null);
     setIsInitializing(true);
     try {
-      const cleanTasks = tasks.map(({ title, description, priority, assignee_id, required_skills, due_in_days }) => ({
+      const cleanTasks = tasks.map(({ title, description, priority, assignee_id, required_skills, due_in_days, delivery_mode, feature_scope, layers, layer_reason, acceptance_criteria }) => ({
         title,
         description,
         priority,
         assignee_id,
         required_skills,
-        due_in_days
+        due_in_days,
+        delivery_mode,
+        feature_scope,
+        layers,
+        layer_reason,
+        acceptance_criteria,
       }));
 
       const response = await fetch(`/api/projects/${projectId}/planner/approve`, {
@@ -276,7 +293,12 @@ export function ProjectAiPlanner({
       priority: "medium",
       assignee_id: members[0]?.id || "",
       required_skills: ["General"],
-      due_in_days: 7
+      due_in_days: 7,
+      delivery_mode: "feature",
+      feature_scope: "Task mới tạo thủ công",
+      layers: ["UI", "API", "Data", "Test"],
+      layer_reason: "",
+      acceptance_criteria: "PM xác nhận đầu ra và demo được luồng chính.",
     };
     setTasks((prev) => [...prev, newTask]);
     setEditingTaskIndex(tasks.length); // Open editing mode for new task
@@ -358,7 +380,7 @@ export function ProjectAiPlanner({
           </div>
           <h2 className="mt-4 text-2xl font-black text-slate-950">Nexus AI Project Planner</h2>
           <p className="mt-2 max-w-xl mx-auto text-sm leading-6 text-slate-600">
-            Nexus AI Planner sẽ đọc tài liệu dự án để phân tích kiến trúc, mục tiêu, kết hợp cùng hồ sơ năng lực thành viên để lập dự thảo chia việc và deadline hợp lý.
+              Nexus AI Planner đọc tài liệu, mục tiêu và năng lực thành viên để giao feature end-to-end. Các task chỉ tách theo layer khi có dependency kỹ thuật rõ ràng và luôn kèm phạm vi bàn giao.
           </p>
 
           <div className="mt-6 flex flex-wrap justify-center gap-6 text-xs font-semibold text-slate-500">
@@ -398,6 +420,10 @@ export function ProjectAiPlanner({
                   Bản nháp chia việc ({tasks.length} tasks)
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">Click vào thẻ để tự chỉnh sửa thủ công theo ý bạn.</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-bold">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-1 text-violet-700"><GitBranch size={12} /> Feature-first / vertical slice</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-slate-600"><Layers3 size={12} /> Hybrid layer khi cần</span>
+                </div>
               </div>
               <button
                 className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
@@ -489,6 +515,28 @@ export function ProjectAiPlanner({
                           </div>
                         </div>
 
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div>
+                            <label className="text-xs font-bold text-slate-700">Cách sở hữu task</label>
+                            <select
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-medium outline-none focus:border-violet-400"
+                              onChange={(e) => handleUpdateTaskField(index, "delivery_mode", e.target.value as "feature" | "layer")}
+                              value={task.delivery_mode || "feature"}
+                            >
+                              <option value="feature">Feature end-to-end</option>
+                              <option value="layer">Layer chuyên biệt</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-700">Phạm vi feature</label>
+                            <input
+                              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400"
+                              onChange={(e) => handleUpdateTaskField(index, "feature_scope", e.target.value)}
+                              value={task.feature_scope || task.title}
+                            />
+                          </div>
+                        </div>
+
                         <div className="flex justify-between items-center pt-2 border-t">
                           <button
                             className="flex items-center gap-1 text-xs font-bold text-rose-600 hover:text-rose-800"
@@ -528,7 +576,11 @@ export function ProjectAiPlanner({
                         <p className="mt-1.5 text-xs text-slate-500 line-clamp-2 leading-relaxed">
                           {task.description || "Chưa có mô tả công việc."}
                         </p>
-                        <div className="mt-3 flex flex-wrap gap-4 text-[11px] text-slate-500 font-semibold">
+                        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500 font-semibold">
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ${task.delivery_mode === "layer" ? "bg-amber-50 text-amber-700" : "bg-violet-50 text-violet-700"}`}>
+                            {task.delivery_mode === "layer" ? <Layers3 size={12} /> : <GitBranch size={12} />}
+                            {task.delivery_mode === "layer" ? "Layer chuyên biệt" : "Feature end-to-end"}
+                          </span>
                           <span className="flex items-center gap-1">
                             <User size={12} className="text-slate-400" />
                             Giao cho: <strong className="text-slate-800">{assigneeName}</strong>
@@ -538,6 +590,13 @@ export function ProjectAiPlanner({
                             Thời hạn: <strong className="text-slate-800">{task.due_in_days} ngày nữa</strong>
                           </span>
                         </div>
+                        <p className="mt-2 text-[11px] text-slate-500">
+                          <strong className="text-slate-700">Phạm vi:</strong> {task.feature_scope || task.title}
+                          {task.layers?.length ? ` · ${task.layers.join(" · ")}` : ""}
+                        </p>
+                        {task.delivery_mode === "layer" && task.layer_reason ? (
+                          <p className="mt-1 text-[11px] text-amber-700"><strong>Lý do tách layer:</strong> {task.layer_reason}</p>
+                        ) : null}
                       </div>
                     )}
                   </article>

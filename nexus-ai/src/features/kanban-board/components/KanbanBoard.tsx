@@ -73,6 +73,7 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
   const [showPmOnlyReworkModal, setShowPmOnlyReworkModal] = useState(false);
   const [monitoring, setMonitoring] = useState(false);
   const [refreshingProgress, setRefreshingProgress] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -382,6 +383,33 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
       setToast({ tone: "success", message: action === "support_requested" ? "Đã gửi yêu cầu hỗ trợ cho PM." : "Đã ghi nhận blocker để PM theo dõi." });
     } catch (error) {
       setToast({ tone: "error", message: error instanceof Error ? error.message : "Không thể ghi nhận hoạt động task." });
+    }
+  }
+
+  async function deleteTask(task: KanbanTask) {
+    if (initialData.currentUserRole !== "pm" || isPersonalBoard || deletingTaskId) return;
+    if (!window.confirm(`Xóa task "${task.title}" khỏi Team board? Thao tác này không thể hoàn tác.`)) return;
+
+    const previousTasks = tasks;
+    setDeletingTaskId(task.id);
+    setTasks((current) => current.filter((item) => item.id !== task.id));
+
+    if (initialData.dataSource === "mock") {
+      setDeletingTaskId(null);
+      setToast({ tone: "success", message: "Đã xóa task trong mock state." });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/projects/${initialData.projectId}/tasks/${task.id}`, { method: "DELETE" });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error || "Không thể xóa task.");
+      setToast({ tone: "success", message: `Đã xóa task "${task.title}" khỏi Team board.` });
+    } catch (error) {
+      setTasks(previousTasks);
+      setToast({ tone: "error", message: error instanceof Error ? error.message : "Không thể xóa task." });
+    } finally {
+      setDeletingTaskId(null);
     }
   }
 
@@ -726,6 +754,8 @@ export function KanbanBoard({ initialData }: { initialData: KanbanBoardData }) {
           {statuses.map((status) => (
             <KanbanColumn
               canManageRework={initialData.currentUserRole === "pm"}
+              canDeleteTasks={initialData.currentUserRole === "pm" && !isPersonalBoard}
+              onTaskDelete={deleteTask}
               onTaskAction={reportTaskAction}
               key={status}
               status={status}
