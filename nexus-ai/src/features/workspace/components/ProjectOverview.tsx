@@ -15,6 +15,7 @@ import {
 
 import { InviteApprovalActions } from "./InviteApprovalActions";
 import { InviteMemberForm } from "./InviteMemberForm";
+import { RemoveMemberAction } from "./RemoveMemberAction";
 import { TaskCreationPolicy } from "./TaskCreationPolicy";
 
 import type {
@@ -29,6 +30,7 @@ type ProjectOverviewProps = {
   risks: WorkspaceRiskEvent[];
   currentRole: "pm" | "member";
   dataSource: "supabase" | "mock";
+  projectId: string;
 };
 
 export function ProjectOverview({
@@ -37,6 +39,7 @@ export function ProjectOverview({
   risks,
   currentRole,
   dataSource,
+  projectId,
 }: ProjectOverviewProps) {
   const [selectedMember, setSelectedMember] = useState<WorkspaceProject["members"][number] | null>(null);
   const pendingInvites = invites.filter(
@@ -349,7 +352,15 @@ export function ProjectOverview({
               </div>
             </div>
 
-            <footer className="mt-6 pt-4 border-t border-slate-105 flex justify-end">
+            {currentRole === "pm" && selectedMember.role === "member" ? (
+              <RemoveMemberAction
+                projectId={projectId}
+                memberId={selectedMember.id}
+                onRemoved={() => setSelectedMember(null)}
+              />
+            ) : null}
+
+            <footer className="mt-6 flex justify-end border-t border-slate-105 pt-4">
               <button
                 onClick={() => setSelectedMember(null)}
                 className="rounded-xl bg-slate-955 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-slate-800"

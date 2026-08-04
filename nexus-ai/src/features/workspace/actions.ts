@@ -232,6 +232,32 @@ export async function rejectProjectInvite(
   }
 }
 
+export async function removeProjectMember(
+  _previousState: WorkspaceActionState,
+  formData: FormData,
+): Promise<WorkspaceActionState> {
+  try {
+    const projectId = getString(formData, "projectId");
+    const memberId = getString(formData, "memberId");
+    if (!projectId || !memberId) return { error: "Thiếu thông tin thành viên." };
+
+    const { supabase, role } = await requireProjectAccess(projectId);
+    if (role !== "pm") return { error: "Chỉ PM mới được xóa thành viên." };
+    if (!supabase) return { error: "Không thể kết nối dữ liệu project." };
+
+    const { error } = await supabase.rpc("remove_project_member", {
+      target_project_id: projectId,
+      target_user_id: memberId,
+    });
+    if (error) return { error: error.message };
+
+    revalidatePath(`/project/${projectId}`);
+    return { message: "Đã xóa thành viên khỏi nhóm." };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Không thể xóa thành viên." };
+  }
+}
+
 export async function generateProjectRecommendations(
   _previousState: WorkspaceActionState & { message?: string },
   formData: FormData,

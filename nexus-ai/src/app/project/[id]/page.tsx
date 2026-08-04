@@ -26,5 +26,5 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
   if (!overview) notFound();
 
-  return <><BackButton fallback="/project" /><ProjectOverview {...overview} /></>;
+  return <><BackButton fallback="/project" /><ProjectOverview {...overview} projectId={id} /></>;
 }

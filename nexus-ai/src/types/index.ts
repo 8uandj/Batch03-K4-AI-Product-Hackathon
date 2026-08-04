@@ -567,6 +567,13 @@ export type Database = {
         };
         Returns: string;
       };
+      remove_project_member: {
+        Args: {
+          target_project_id: string;
+          target_user_id: string;
+        };
+        Returns: boolean;
+      };
       generate_project_recommendations: {
         Args: {
           target_project_id: string;
