@@ -38,7 +38,7 @@ create table public.project_invites (
   email text not null,
   role text not null default 'member'
     check (role in ('pm', 'member')),
-  token text not null unique default encode(gen_random_bytes(24), 'hex'),
+  token text not null unique default replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''),
   status text not null default 'pending'
     check (status in ('pending', 'awaiting_approval', 'accepted', 'revoked', 'expired')),
   expires_at timestamp with time zone,
